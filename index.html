@@ -157,6 +157,10 @@
   .histtoolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:2vh; flex-wrap:wrap; gap:12px; }
   .histtable-wrap{ background:var(--panel); border:1px solid var(--line); border-radius:3px; overflow-x:auto; }
   .histtable-wrap table{ min-width:1100px; }
+  .histtable-wrap th:last-child, .histtable-wrap td:last-child{
+    position:sticky; right:0; background:var(--panel); box-shadow:-8px 0 12px -8px rgba(0,0,0,0.5);
+  }
+  .histtable-wrap thead th:last-child{ background:var(--panel2); }
   .rowdel{ background:transparent; border:1px solid var(--line); color:var(--red); font-size:0.72rem; padding:5px 10px; border-radius:2px; cursor:pointer; }
   .rowdel:hover{ border-color:var(--red); }
   .empty{ text-align:center; padding:40px 20px; color:var(--muted); font-size:0.88rem; }
@@ -181,9 +185,16 @@
 
   .crmtable-wrap{ background:var(--panel); border:1px solid var(--line); border-radius:3px; overflow-x:auto; }
   .crmtable-wrap table{ min-width:1000px; }
+  .crmtable-wrap th:last-child, .crmtable-wrap td:last-child{
+    position:sticky; right:0; background:var(--panel); box-shadow:-8px 0 12px -8px rgba(0,0,0,0.5);
+  }
+  .crmtable-wrap thead th:last-child{ background:var(--panel2); }
   .igcell{ color:var(--gold-soft); }
   .rowedit{ background:transparent; border:1px solid var(--line); color:var(--gold); font-size:0.72rem; padding:5px 10px; border-radius:2px; cursor:pointer; margin-right:6px; }
   .rowedit:hover{ border-color:var(--gold); }
+  .clickrow{ cursor:pointer; transition:background .15s ease; }
+  .clickrow:hover td{ background:var(--panel2); }
+  .clickrow td:last-child:hover{ background:var(--panel); }
 
   footer{ text-align:center; padding:40px 6vw 10px; color:var(--muted); font-size:0.74rem; }
 </style>
@@ -422,7 +433,7 @@
   <section class="view" id="view-historico">
     <div class="eyebrow">Registros</div>
     <h2 class="headline">Todo dia <em>lançado</em>, um por um</h2>
-    <p class="lede">Use para conferir, corrigir ou exportar. Enquanto o Supabase não está plugado, exporte em CSV para consolidar os dados de todos os SDRs num só arquivo.</p>
+    <p class="lede">Toque em qualquer linha da tabela pra editar. Use exportar/importar CSV como backup ou pra migrações pontuais.</p>
 
     <div class="histtoolbar">
       <div style="display:flex; gap:10px;">
@@ -990,7 +1001,7 @@ function renderHistory(){
   }
   empty.style.display = 'none';
   body.innerHTML = sorted.map(e=>`
-    <tr>
+    <tr class="clickrow" data-id="${e.id}">
       <td>${fmtDate(e.date)}</td>
       <td>${e.sdr}</td>
       <td class="muted">${e.leads}</td>
@@ -1005,37 +1016,42 @@ function renderHistory(){
       <td class="muted">${e.vendas}</td>
       <td class="muted" style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${e.obs || ''}</td>
       <td style="white-space:nowrap;">
-        <button class="rowedit" data-id="${e.id}">editar</button>
         <button class="rowdel" data-id="${e.id}">apagar</button>
       </td>
     </tr>
   `).join('');
 
-  body.querySelectorAll('.rowedit').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const entry = entries.find(e=>e.id === btn.dataset.id);
-      if(!entry) return;
-      currentSdr = entry.sdr;
-      if(!sdrs.includes(entry.sdr)) sdrs.push(entry.sdr);
-      renderWhoSelect();
-      populateSdrFilter();
-      dateInput.value = entry.date;
-      FIELDS.forEach(f=>{ document.getElementById('f_'+f).value = entry[f]; });
-      document.getElementById('f_obs').value = entry.obs || '';
-      entryEditingId = entry.id;
-      document.getElementById('saveBtn').textContent = 'Atualizar dia';
-      document.getElementById('entryCancelBtn').style.display = 'inline-block';
-      document.getElementById('editingNote').textContent = 'Editando o lançamento de ' + fmtDate(entry.date) + ' (' + entry.sdr + ').';
-      document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
-      document.querySelector('nav.tabs button[data-view="lancar"]').classList.add('active');
-      document.querySelectorAll('section.view').forEach(s=>s.classList.remove('active'));
-      document.getElementById('view-lancar').classList.add('active');
-      window.scrollTo({ top:0, behavior:'smooth' });
+  function openEntryForEdit(id){
+    const entry = entries.find(e=>e.id === id);
+    if(!entry) return;
+    currentSdr = entry.sdr;
+    if(!sdrs.includes(entry.sdr)) sdrs.push(entry.sdr);
+    renderWhoSelect();
+    populateSdrFilter();
+    dateInput.value = entry.date;
+    FIELDS.forEach(f=>{ document.getElementById('f_'+f).value = entry[f]; });
+    document.getElementById('f_obs').value = entry.obs || '';
+    entryEditingId = entry.id;
+    document.getElementById('saveBtn').textContent = 'Atualizar dia';
+    document.getElementById('entryCancelBtn').style.display = 'inline-block';
+    document.getElementById('editingNote').textContent = 'Editando o lançamento de ' + fmtDate(entry.date) + ' (' + entry.sdr + ').';
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    document.querySelector('nav.tabs button[data-view="lancar"]').classList.add('active');
+    document.querySelectorAll('section.view').forEach(s=>s.classList.remove('active'));
+    document.getElementById('view-lancar').classList.add('active');
+    window.scrollTo({ top:0, behavior:'smooth' });
+  }
+
+  body.querySelectorAll('tr.clickrow').forEach(tr=>{
+    tr.addEventListener('click', (ev)=>{
+      if(ev.target.closest('.rowdel')) return;
+      openEntryForEdit(tr.dataset.id);
     });
   });
 
   body.querySelectorAll('.rowdel').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
+    btn.addEventListener('click', async (ev)=>{
+      ev.stopPropagation();
       if(!confirm('Apagar este lançamento?')) return;
       const ok = await deleteEntryRemote(btn.dataset.id);
       if(!ok) return;
@@ -1236,7 +1252,7 @@ function renderCrm(){
   empty.style.display = 'none';
   body.innerHTML = list.map(l=>{
     const s = statusInfo(l.status);
-    return `<tr>
+    return `<tr class="clickrow" data-id="${l.id}">
       <td>${l.nome}</td>
       <td class="igcell">${l.ig || '—'}</td>
       <td class="muted">${l.data ? fmtDate(l.data) : '—'}</td>
@@ -1244,30 +1260,36 @@ function renderCrm(){
       <td><span class="badge"><span class="dot" style="background:${s.color}"></span>${s.label}</span></td>
       <td class="muted" style="max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${l.obs || ''}</td>
       <td style="white-space:nowrap;">
-        <button class="rowedit" data-id="${l.id}">editar</button>
         <button class="rowdel" data-id="${l.id}">apagar</button>
       </td>
     </tr>`;
   }).join('');
 
-  body.querySelectorAll('.rowedit').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const lead = crmLeads.find(l=>l.id===btn.dataset.id);
-      if(!lead) return;
-      document.getElementById('c_nome').value = lead.nome;
-      document.getElementById('c_ig').value = lead.ig;
-      document.getElementById('c_data').value = lead.data;
-      document.getElementById('c_hora').value = lead.hora;
-      document.getElementById('c_status').value = lead.status;
-      document.getElementById('c_obs').value = lead.obs;
-      crmEditingId = lead.id;
-      document.getElementById('crmSaveBtn').textContent = 'Atualizar lead';
-      document.getElementById('crmCancelBtn').style.display = 'inline-block';
-      document.querySelector('#view-crm .formcard').scrollIntoView({ behavior:'smooth', block:'start' });
+  function openLeadForEdit(id){
+    const lead = crmLeads.find(l=>l.id===id);
+    if(!lead) return;
+    document.getElementById('c_nome').value = lead.nome;
+    document.getElementById('c_ig').value = lead.ig;
+    document.getElementById('c_data').value = lead.data;
+    document.getElementById('c_hora').value = lead.hora;
+    document.getElementById('c_status').value = lead.status;
+    document.getElementById('c_obs').value = lead.obs;
+    crmEditingId = lead.id;
+    document.getElementById('crmSaveBtn').textContent = 'Atualizar lead';
+    document.getElementById('crmCancelBtn').style.display = 'inline-block';
+    document.querySelector('#view-crm .formcard').scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+
+  body.querySelectorAll('tr.clickrow').forEach(tr=>{
+    tr.addEventListener('click', (ev)=>{
+      if(ev.target.closest('.rowdel')) return;
+      openLeadForEdit(tr.dataset.id);
     });
   });
+
   body.querySelectorAll('.rowdel').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
+    btn.addEventListener('click', async (ev)=>{
+      ev.stopPropagation();
       if(!confirm('Apagar este lead?')) return;
       const ok = await deleteLeadRemote(btn.dataset.id);
       if(!ok) return;
