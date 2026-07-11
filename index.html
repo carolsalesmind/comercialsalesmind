@@ -3,10 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Painel Comercial | Sales Mind</title>
+<title>Treinamento de Atendimento | Sales Mind</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js" crossorigin="anonymous"></script>
 <style>
   :root{
     --black:#0a0908;
@@ -17,1140 +16,424 @@
     --cream:#f5efe2;
     --muted:#948d7c;
     --line:rgba(201,168,76,0.18);
-    --red:#c46a5a;
-    --green:#8fae7a;
-    --amber:#d1a24a;
-    color-scheme: dark;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
-  html{ background:var(--black); }
-  html,body{ min-height:100%; color-scheme: dark; }
+  html,body{ height:100%; }
   body{
-    background:var(--black);
+    background:#0a0908 !important;
     color:var(--cream);
     font-family:'DM Sans',sans-serif;
     font-weight:300;
-    line-height:1.5;
-    padding-bottom:60px;
+    line-height:1.6;
+    overflow:hidden;
   }
   ::selection{ background:var(--gold); color:#0a0908; }
   h1,h2,h3,.serif{ font-family:'Cormorant Garamond',serif; font-weight:400; letter-spacing:0.01em; }
-  a{ color:var(--gold); }
 
   .eyebrow{
     font-family:'DM Sans',sans-serif; text-transform:uppercase; letter-spacing:0.22em;
-    font-size:0.68rem; color:var(--gold); font-weight:600;
+    font-size:0.72rem; color:var(--gold); font-weight:600;
   }
 
-  /* ---------- header ---------- */
-  header{
-    position:sticky; top:0; z-index:50;
-    background:rgba(10,9,8,0.92); backdrop-filter:blur(8px);
-    border-bottom:1px solid var(--line);
-    padding:18px 6vw;
-    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px;
+  /* ---------- deck shell ---------- */
+  #deck{ position:relative; width:100vw; height:100vh; background:#0a0908 !important; }
+
+  .slide{
+    position:absolute; inset:0;
+    padding:9vh 8vw 10vh 8vw;
+    display:flex; flex-direction:column; justify-content:center;
+    opacity:0; visibility:hidden;
+    transform:translateX(24px);
+    transition:opacity .5s ease, transform .5s ease;
+    background:#0a0908 !important;
   }
-  .brandmark{ display:flex; flex-direction:column; }
-  .brandmark .name{ font-family:'Cormorant Garamond',serif; font-size:1.4rem; color:var(--gold); font-weight:500; line-height:1; }
-  .brandmark .tag{ font-size:0.66rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--muted); margin-top:4px; }
+  .slide.active{ opacity:1; visibility:visible; transform:translateX(0); z-index:2; }
+  .slide.prevslide{ transform:translateX(-24px); }
 
-  nav.tabs{ display:flex; gap:4px; background:var(--panel); border:1px solid var(--line); border-radius:3px; padding:4px; }
-  nav.tabs button{
-    background:transparent; border:none; color:var(--muted); font-family:'DM Sans',sans-serif;
-    font-size:0.8rem; padding:9px 16px; cursor:pointer; border-radius:2px; transition:all .2s ease;
-    letter-spacing:0.02em;
-  }
-  nav.tabs button.active{ background:var(--gold); color:var(--black); font-weight:600; }
-  nav.tabs button:not(.active):hover{ color:var(--cream); }
+  .num{ font-family:'Cormorant Garamond',serif; font-size:1rem; color:var(--gold-soft); letter-spacing:0.15em; margin-bottom:18px; }
 
-  .whoami{ display:flex; align-items:center; gap:8px; }
-  .whoami select, .whoami input{
-    background:var(--panel); border:1px solid var(--line); color:var(--cream);
-    font-family:'DM Sans',sans-serif; font-size:0.82rem; padding:8px 10px; border-radius:2px;
-  }
-  .whoami .lbl{ font-size:0.68rem; text-transform:uppercase; letter-spacing:0.12em; color:var(--muted); }
-
-  main{ max-width:1180px; margin:0 auto; padding:5vh 6vw 0; }
-  section.view{ display:none; }
-  section.view.active{ display:block; animation:fade .35s ease; }
-  @keyframes fade{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
-
-  .headline{ font-size:clamp(1.5rem,3vw,2.3rem); color:var(--cream); margin-bottom:0.3em; }
+  .headline{ font-size:clamp(1.8rem,4vw,3rem); max-width:17ch; color:var(--cream); margin-bottom:0.4em; }
   .headline em{ font-style:italic; color:var(--gold); }
-  .lede{ color:var(--muted); max-width:62ch; font-size:0.95rem; margin-bottom:4vh; }
+  .lede{ color:var(--muted); max-width:58ch; font-size:1.02rem; margin-bottom:4vh; }
 
-  /* ---------- form ---------- */
-  .formcard{ background:var(--panel); border:1px solid var(--line); padding:32px; border-radius:3px; }
-  .fgrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:22px; }
-  @media (max-width:800px){ .fgrid{grid-template-columns:1fr 1fr;} }
-  @media (max-width:520px){ .fgrid{grid-template-columns:1fr;} }
-  .field{ display:flex; flex-direction:column; gap:7px; }
-  .field.full{ grid-column:1/-1; }
-  .field label{ font-size:0.68rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--gold-soft); }
-  .field .hint{ font-size:0.72rem; color:var(--muted); margin-top:-3px; }
-  .field input, .field textarea, .field select{
-    background:var(--panel2); border:1px solid var(--line); color:var(--cream);
-    font-family:'DM Sans',sans-serif; font-size:0.94rem; padding:11px 12px; border-radius:2px;
-    outline:none; transition:border-color .2s ease; color-scheme: dark;
+  /* ---------- hero slide ---------- */
+  #s0{ align-items:flex-start; }
+  #s0 .bg-glow{
+    position:absolute; inset:0; z-index:0;
+    background:radial-gradient(ellipse 60% 50% at 85% 15%, rgba(201,168,76,0.10), transparent 60%);
   }
-  .field input:focus, .field textarea:focus, .field select:focus{ border-color:var(--gold); }
-  .field textarea{ resize:vertical; min-height:70px; font-family:'DM Sans',sans-serif; }
+  #s0 .brand{ font-size:0.78rem; letter-spacing:0.3em; text-transform:uppercase; color:var(--muted); margin-bottom:5vh; position:relative; z-index:1;}
+  #s0 h1{ font-size:clamp(2.2rem,6vw,4.6rem); color:var(--cream); max-width:15ch; line-height:1.04; position:relative; z-index:1;}
+  #s0 h1 em{ font-style:italic; color:var(--gold); }
+  #s0 .sub{ margin-top:26px; max-width:48ch; color:var(--muted); font-size:1.05rem; position:relative; z-index:1;}
+  #s0 .meta-row{ margin-top:6vh; display:flex; gap:40px; flex-wrap:wrap; position:relative; z-index:1;}
+  #s0 .meta-row div{ font-size:0.82rem; color:var(--muted); }
+  #s0 .meta-row strong{ display:block; color:var(--gold); font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:500; }
 
-  .formfoot{ display:flex; align-items:center; justify-content:space-between; margin-top:28px; gap:16px; flex-wrap:wrap; }
-  .btn{
-    background:var(--gold); color:var(--black); border:none; font-weight:600; font-size:0.85rem;
-    padding:13px 26px; border-radius:2px; cursor:pointer; letter-spacing:0.02em; transition:all .2s ease;
-    font-family:'DM Sans',sans-serif;
+  /* pillars */
+  .pillars{ display:flex; gap:0; margin-top:2vh; border:1px solid var(--line); }
+  .pillar{ flex:1; padding:26px 22px; border-right:1px solid var(--line); }
+  .pillar:last-child{ border-right:none; }
+  @media (max-width:900px){ .pillars{flex-direction:column;} .pillar{border-right:none; border-bottom:1px solid var(--line);} }
+  .pillar h4{ color:var(--cream); font-size:1.1rem; font-weight:500; margin-bottom:8px; }
+  .pillar p{ color:var(--muted); font-size:0.86rem; }
+
+  /* timeline */
+  .timeline{ position:relative; padding-left:36px; overflow-y:auto; max-height:58vh; }
+  .timeline::before{ content:''; position:absolute; left:9px; top:6px; bottom:6px; width:1px; background:linear-gradient(var(--gold), rgba(201,168,76,0.05)); }
+  .tstep{ position:relative; padding-bottom:22px; }
+  .tstep:last-child{ padding-bottom:0; }
+  .tstep::before{ content:''; position:absolute; left:-36px; top:4px; width:10px; height:10px; border-radius:50%; background:var(--black); border:2px solid var(--gold); }
+  .tstep h3{ font-size:1.18rem; color:var(--cream); font-weight:500; margin-bottom:3px; }
+  .tstep p{ color:var(--muted); font-size:0.88rem; max-width:56ch; }
+  .tstep .tag{ font-size:0.68rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--gold-soft); }
+
+  /* stats */
+  .stats{ display:flex; gap:50px; flex-wrap:wrap; margin-bottom:3vh; }
+  .stat strong{ display:block; font-family:'Cormorant Garamond',serif; font-size:2.4rem; color:var(--gold); font-weight:500; }
+  .stat span{ font-size:0.8rem; color:var(--muted); max-width:22ch; display:block; }
+
+  /* cadence table */
+  .cadence{ width:100%; border-collapse:collapse; }
+  .cadence th{ text-align:left; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--gold-soft); padding:8px 12px; border-bottom:1px solid var(--line); }
+  .cadence td{ padding:12px 12px; border-bottom:1px solid var(--line); font-size:0.86rem; color:var(--cream); vertical-align:top; }
+  .cadence td.muted{ color:var(--muted); }
+  .cadence tr:last-child td{ border-bottom:none; }
+
+  /* AAA framework */
+  .aaa{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin-top:2vh; }
+  @media (max-width:900px){ .aaa{grid-template-columns:1fr;} }
+  .aaa .step{ border-left:1px solid var(--gold); padding-left:18px; }
+  .aaa .letter{ font-family:'Cormorant Garamond',serif; font-size:2.6rem; color:var(--gold); font-weight:500; line-height:1; }
+  .aaa h4{ margin-top:6px; color:var(--cream); font-weight:500; }
+  .aaa p{ color:var(--muted); font-size:0.86rem; margin-top:6px; }
+
+  .quote{ font-family:'Cormorant Garamond',serif; font-style:italic; font-size:1.35rem; color:var(--cream); border-left:2px solid var(--gold); padding-left:20px; max-width:46ch; margin-top:2.5vh; }
+
+  /* cards */
+  .cards{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+  @media (max-width:900px){ .cards{grid-template-columns:1fr;} }
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:2px; padding:22px 20px; }
+  .card .k{ font-family:'Cormorant Garamond',serif; font-size:2.2rem; color:var(--gold); line-height:1; margin-bottom:8px; }
+  .card h4{ color:var(--cream); font-size:1rem; font-weight:500; margin-bottom:6px; }
+  .card p{ color:var(--muted); font-size:0.86rem; }
+
+  /* daily rhythm */
+  .dayflow{ display:flex; flex-direction:column; gap:0; border:1px solid var(--line); margin-top:1vh; }
+  .dayrow{ display:grid; grid-template-columns:140px 1fr; border-bottom:1px solid var(--line); }
+  .dayrow:last-child{ border-bottom:none; }
+  .dayrow .time{ padding:16px 18px; font-size:0.78rem; color:var(--gold-soft); text-transform:uppercase; letter-spacing:0.08em; background:var(--panel); border-right:1px solid var(--line); display:flex; align-items:center; }
+  .dayrow .desc{ padding:16px 18px; font-size:0.88rem; color:var(--muted); display:flex; align-items:center; }
+  .dayrow .desc strong{ color:var(--cream); font-weight:500; }
+
+  /* CRM mock */
+  .crm-mock{ border:1px solid var(--line); background:var(--panel); overflow:hidden; margin-top:1.5vh; }
+  .crm-top{ display:flex; gap:8px; padding:12px 16px; border-bottom:1px solid var(--line); background:var(--panel2); }
+  .crm-top span{ width:8px; height:8px; border-radius:50%; background:rgba(245,239,226,0.15); }
+  .crm-cols{ display:grid; grid-template-columns:repeat(4,1fr); }
+  .crm-col{ padding:14px; border-right:1px solid var(--line); min-height:150px; }
+  .crm-col:last-child{ border-right:none; }
+  .crm-col h5{ font-size:0.65rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--gold-soft); margin-bottom:10px; }
+  .crm-card{ background:var(--panel2); border:1px solid var(--line); padding:8px 10px; font-size:0.74rem; color:var(--cream); margin-bottom:7px; }
+  .crm-card small{ display:block; color:var(--muted); margin-top:2px; font-size:0.66rem; }
+  @media (max-width:900px){ .crm-cols{grid-template-columns:repeat(2,1fr);} }
+
+  /* closing */
+  #sEnd .sign{ margin-top:5vh; color:var(--muted); font-size:0.88rem; }
+  #sEnd .sign strong{ color:var(--gold); display:block; font-family:'Cormorant Garamond',serif; font-size:1.25rem; font-weight:500; }
+
+  /* ---------- controls ---------- */
+  #counter{
+    position:fixed; top:32px; right:8vw; z-index:60;
+    font-family:'Cormorant Garamond',serif; font-size:0.95rem; color:var(--muted); letter-spacing:0.1em;
   }
-  .btn:hover{ background:var(--gold-soft); }
-  .btn.ghost{ background:transparent; border:1px solid var(--line); color:var(--cream); }
-  .btn.ghost:hover{ border-color:var(--gold); color:var(--gold); }
-  .btn.small{ padding:8px 14px; font-size:0.76rem; }
-  .savemsg{ font-size:0.8rem; color:var(--green); opacity:0; transition:opacity .3s ease; }
-  .savemsg.show{ opacity:1; }
+  #counter strong{ color:var(--gold); }
 
-  /* ---------- kpi cards ---------- */
-  .kpirow{ display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:3.5vh; }
-  @media (max-width:900px){ .kpirow{grid-template-columns:repeat(2,1fr);} }
-  @media (max-width:520px){ .kpirow{grid-template-columns:1fr;} }
-  .kpi{ background:var(--panel); border:1px solid var(--line); padding:20px; border-radius:3px; }
-  .kpi .v{ font-family:'Cormorant Garamond',serif; font-size:2rem; color:var(--gold); font-weight:500; line-height:1; }
-  .kpi .l{ font-size:0.74rem; color:var(--muted); margin-top:8px; }
-
-  /* ---------- filters ---------- */
-  .filterbar{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:3vh; align-items:center; }
-  .filterbar select{
-    background:var(--panel); border:1px solid var(--line); color:var(--cream);
-    font-family:'DM Sans',sans-serif; font-size:0.82rem; padding:9px 12px; border-radius:2px;
+  #dots{
+    position:fixed; bottom:34px; left:50%; transform:translateX(-50%);
+    display:flex; gap:12px; z-index:60;
   }
-
-  /* ---------- funnel ---------- */
-  .funnel{ background:var(--panel); border:1px solid var(--line); padding:28px 32px; border-radius:3px; margin-bottom:3.5vh; }
-  .funnel h3{ font-size:1.15rem; color:var(--cream); font-weight:500; margin-bottom:20px; }
-  .fstage{ display:grid; grid-template-columns:170px 1fr 90px 70px; align-items:center; gap:14px; padding:9px 0; border-bottom:1px solid var(--line); }
-  .fstage:last-child{ border-bottom:none; }
-  .fstage .fname{ font-size:0.82rem; color:var(--muted); }
-  .fstage .fbarwrap{ background:var(--panel2); height:20px; border-radius:2px; overflow:hidden; }
-  .fstage .fbar{ height:100%; background:linear-gradient(90deg, var(--gold-soft), var(--gold)); border-radius:2px; transition:width .5s ease; }
-  .fstage .fval{ font-family:'Cormorant Garamond',serif; font-size:1.25rem; color:var(--cream); text-align:right; }
-  .fstage .fpct{ font-size:0.74rem; color:var(--gold-soft); text-align:right; }
-
-  /* ---------- charts ---------- */
-  .chartgrid{ display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:3.5vh; }
-  @media (max-width:900px){ .chartgrid{grid-template-columns:1fr;} }
-  .chartcard{ background:var(--panel); border:1px solid var(--line); padding:22px; border-radius:3px; }
-  .chartcard h4{ font-size:0.95rem; color:var(--cream); font-weight:500; margin-bottom:14px; }
-  .chartcard.wide{ grid-column:1/-1; }
-  .chartcard canvas{ max-height:260px; }
-
-  /* ---------- ranking ---------- */
-  .rankwrap{ background:var(--panel); border:1px solid var(--line); border-radius:3px; overflow:hidden; margin-bottom:3.5vh; }
-  table{ width:100%; border-collapse:collapse; }
-  th{ text-align:left; font-size:0.68rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--gold-soft); padding:12px 16px; border-bottom:1px solid var(--line); background:var(--panel2); }
-  td{ padding:13px 16px; border-bottom:1px solid var(--line); font-size:0.86rem; color:var(--cream); }
-  tr:last-child td{ border-bottom:none; }
-  td.muted, th.muted{ color:var(--muted); }
-  .medal{ font-family:'Cormorant Garamond',serif; color:var(--gold); font-size:1.1rem; }
-
-  /* ---------- history ---------- */
-  .histtoolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:2vh; flex-wrap:wrap; gap:12px; }
-  .histtable-wrap{ background:var(--panel); border:1px solid var(--line); border-radius:3px; overflow-x:auto; }
-  .histtable-wrap table{ min-width:1100px; }
-  .rowdel{ background:transparent; border:1px solid var(--line); color:var(--red); font-size:0.72rem; padding:5px 10px; border-radius:2px; cursor:pointer; }
-  .rowdel:hover{ border-color:var(--red); }
-  .empty{ text-align:center; padding:40px 20px; color:var(--muted); font-size:0.88rem; }
-
-  input[type="file"]{ display:none; }
-
-  /* ---------- crm ---------- */
-  .statuschips{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:3vh; }
-  .chip{
-    border:1px solid var(--line); background:var(--panel); color:var(--muted);
-    font-size:0.76rem; padding:8px 14px; border-radius:20px; cursor:pointer; transition:all .2s ease;
-    display:flex; align-items:center; gap:7px;
+  #dots button{
+    width:7px; height:7px; border-radius:50%; background:rgba(245,239,226,0.18);
+    border:none; cursor:pointer; padding:0; transition:all .3s ease;
   }
-  .chip .dot{ width:7px; height:7px; border-radius:50%; }
-  .chip.active{ border-color:var(--gold); color:var(--cream); background:var(--panel2); }
+  #dots button.active{ background:var(--gold); transform:scale(1.3); }
 
-  .badge{
-    display:inline-flex; align-items:center; gap:6px; font-size:0.72rem; padding:5px 10px;
-    border-radius:20px; border:1px solid var(--line); white-space:nowrap;
+  .arrow{
+    position:fixed; top:50%; transform:translateY(-50%);
+    width:46px; height:46px; border-radius:50%;
+    border:1px solid var(--line); background:rgba(20,18,16,0.6);
+    color:var(--gold); font-family:'Cormorant Garamond',serif; font-size:1.4rem;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; z-index:60; transition:all .25s ease;
   }
-  .badge .dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
-
-  .crmtable-wrap{ background:var(--panel); border:1px solid var(--line); border-radius:3px; overflow-x:auto; }
-  .crmtable-wrap table{ min-width:1000px; }
-  .igcell{ color:var(--gold-soft); }
-  .rowedit{ background:transparent; border:1px solid var(--line); color:var(--gold); font-size:0.72rem; padding:5px 10px; border-radius:2px; cursor:pointer; margin-right:6px; }
-  .rowedit:hover{ border-color:var(--gold); }
-
-  footer{ text-align:center; padding:40px 6vw 10px; color:var(--muted); font-size:0.74rem; }
+  .arrow:hover{ border-color:var(--gold); background:var(--panel2); }
+  .arrow:disabled{ opacity:0.25; cursor:default; }
+  #prev{ left:24px; }
+  #next{ right:24px; }
+  @media (max-width:700px){ .arrow{width:38px; height:38px;} #prev{left:10px;} #next{right:10px;} }
 </style>
 </head>
 <body>
 
-<header>
-  <div class="brandmark">
-    <div class="name">Sales Mind</div>
-    <div class="tag">Painel Comercial &middot; SDR</div>
-  </div>
-  <nav class="tabs" id="tabs">
-    <button data-view="lancar" class="active">Lançar dia</button>
-    <button data-view="dashboard">Dashboard</button>
-    <button data-view="crm">CRM</button>
-    <button data-view="historico">Histórico</button>
-  </nav>
-  <div class="whoami">
-    <span class="lbl">SDR</span>
-    <select id="whoSelect"></select>
-    <input type="text" id="whoNew" placeholder="novo nome" style="width:110px;">
-    <button class="btn small ghost" id="whoAdd">+</button>
-  </div>
-</header>
+<div id="counter"><strong id="cNow">01</strong> / <span id="cTotal">09</span></div>
+<button class="arrow" id="prev">&#8249;</button>
+<button class="arrow" id="next">&#8250;</button>
+<div id="dots"></div>
 
-<main>
+<div id="deck">
 
-  <!-- ================= LANÇAR DIA ================= -->
-  <section class="view active" id="view-lancar">
-    <div class="eyebrow">Preenchimento diário</div>
-    <h2 class="headline">Só o <em>número do dia</em>, nada além disso.</h2>
-    <p class="lede">Preencha ao final do expediente. O painel calcula taxas, ranking e evolução automaticamente a partir do que você lançar aqui.</p>
+  <section class="slide active" id="s0">
+    <div class="bg-glow"></div>
+    <div class="brand">Sales Mind &mdash; Treinamento de Atendimento</div>
+    <h1>Do primeiro <em>contato</em><br>até a <em>consulta marcada</em>.</h1>
+    <p class="sub">Como conduzir cada paciente que chega até a sua clínica, do direct do Instagram ao procedimento agendado, sem perder ninguém pelo caminho.</p>
+    <div class="meta-row">
+      <div><strong>01</strong>Mentalidade de atendimento</div>
+      <div><strong>02</strong>Jornada do paciente</div>
+      <div><strong>03</strong>Cadência de follow up</div>
+      <div><strong>04</strong>Objeções</div>
+      <div><strong>05</strong>Comparecimento e conversão</div>
+      <div><strong>06</strong>Organização</div>
+    </div>
+  </section>
 
-    <div class="formcard">
-      <div class="fgrid">
-        <div class="field">
-          <label>Data</label>
-          <input type="date" id="f_date">
-        </div>
-        <div class="field">
-          <label>SDR</label>
-          <input type="text" id="f_sdr" placeholder="nome do SDR" readonly>
-          <span class="hint">definido pelo seletor no topo</span>
-        </div>
-        <div class="field"></div>
-
-        <div class="field">
-          <label>Leads prospectados</label>
-          <input type="number" min="0" id="f_leads" placeholder="0">
-          <span class="hint">perfis chamados no dia</span>
-        </div>
-        <div class="field">
-          <label>Follow-ups realizados</label>
-          <input type="number" min="0" id="f_followups" placeholder="0">
-        </div>
-        <div class="field">
-          <label>Mensagens respondidas</label>
-          <input type="number" min="0" id="f_respondidas" placeholder="0">
-        </div>
-
-        <div class="field">
-          <label>Respostas positivas</label>
-          <input type="number" min="0" id="f_positivas" placeholder="0">
-        </div>
-        <div class="field">
-          <label>Respostas negativas</label>
-          <input type="number" min="0" id="f_negativas" placeholder="0">
-        </div>
-        <div class="field">
-          <label>Convites para call enviados</label>
-          <input type="number" min="0" id="f_convites" placeholder="0">
-        </div>
-
-        <div class="field">
-          <label>Calls agendadas</label>
-          <input type="number" min="0" id="f_agendadas" placeholder="0">
-        </div>
-        <div class="field">
-          <label>Calls realizadas</label>
-          <input type="number" min="0" id="f_realizadas" placeholder="0">
-        </div>
-        <div class="field">
-          <label>Propostas enviadas</label>
-          <input type="number" min="0" id="f_propostas" placeholder="0">
-        </div>
-
-        <div class="field">
-          <label>Vendas fechadas</label>
-          <input type="number" min="0" id="f_vendas" placeholder="0">
-          <span class="hint">quando aplicável</span>
-        </div>
-        <div class="field full">
-          <label>Observações do dia</label>
-          <textarea id="f_obs" placeholder="algo que valha registrar sobre o dia..."></textarea>
-        </div>
+  <section class="slide" id="s1">
+    <div class="num">01 &mdash; Mentalidade</div>
+    <h2 class="headline">Vocês não vendem. <em>Vocês acolhem.</em></h2>
+    <p class="lede">Quem atende o primeiro contato não é vendedor, é a primeira impressão da clínica inteira. A pessoa do outro lado não quer ser convencida, quer se sentir cuidada antes mesmo de chegar na cadeira.</p>
+    <div class="pillars">
+      <div class="pillar">
+        <h4>O agendamento é consequência</h4>
+        <p>Se o paciente sente que foi ouvido e entendido, ele agenda naturalmente. Forçar o agendamento cedo demais afasta quem ainda está decidindo.</p>
       </div>
-
-      <div class="formfoot">
-        <div style="display:flex; gap:10px; align-items:center;">
-          <button class="btn" id="saveBtn">Salvar dia</button>
-          <span class="savemsg" id="saveMsg">Salvo com sucesso.</span>
-        </div>
-        <span style="font-size:0.76rem; color:var(--muted);" id="editingNote"></span>
+      <div class="pillar">
+        <h4>Elogio antes de qualquer coisa</h4>
+        <p>Reconheça o que trouxe a pessoa até aqui antes de falar de procedimento. "Que bom que você procurou isso" muda o tom da conversa inteira.</p>
+      </div>
+      <div class="pillar">
+        <h4>Pergunta conduz, não empurra</h4>
+        <p>Toda dúvida do paciente é uma chance de entender melhor o que ele precisa, nunca um obstáculo para argumentar contra.</p>
       </div>
     </div>
   </section>
 
-  <!-- ================= DASHBOARD ================= -->
-  <section class="view" id="view-dashboard">
-    <div class="eyebrow">Indicadores</div>
-    <h2 class="headline">Onde o funil está <em>ganhando ou perdendo</em></h2>
-    <p class="lede">Números do período selecionado, com o comparativo entre etapas e entre SDRs.</p>
-
-    <div class="filterbar">
-      <select id="periodFilter">
-        <option value="7">Últimos 7 dias</option>
-        <option value="30" selected>Últimos 30 dias</option>
-        <option value="90">Últimos 90 dias</option>
-        <option value="all">Tudo</option>
-      </select>
-      <select id="sdrFilter">
-        <option value="all">Todos os SDRs</option>
-      </select>
-    </div>
-
-    <div class="kpirow" id="kpiRow"></div>
-
-    <div class="funnel">
-      <h3>Funil do período</h3>
-      <div id="funnelBody"></div>
-    </div>
-
-    <div class="chartgrid">
-      <div class="chartcard">
-        <h4>Leads prospectados por dia</h4>
-        <canvas id="chartLeads"></canvas>
+  <section class="slide" id="s2">
+    <div class="num">02 &mdash; Jornada do Paciente</div>
+    <h2 class="headline">Cada etapa tem <em>um único objetivo</em></h2>
+    <p class="lede">Pular etapa é a forma mais comum de perder um agendamento que já estava praticamente fechado.</p>
+    <div class="timeline">
+      <div class="tstep">
+        <span class="tag">Primeiro contato</span>
+        <h3>Direct, WhatsApp ou indicação</h3>
+        <p>Objetivo único: responder rápido e gerar confiança. Ninguém agenda no primeiro segundo, mas todo mundo lembra de quem respondeu bem.</p>
       </div>
-      <div class="chartcard">
-        <h4>Taxa de resposta (%)</h4>
-        <canvas id="chartTaxaResposta"></canvas>
+      <div class="tstep">
+        <span class="tag">Triagem</span>
+        <h3>Entender o que a pessoa procura</h3>
+        <p>Perguntas simples para identificar a necessidade real antes de falar de agenda: o que motivou a busca, há quanto tempo pensa nisso, o que já tentou.</p>
       </div>
-      <div class="chartcard">
-        <h4>Calls agendadas por dia</h4>
-        <canvas id="chartCalls"></canvas>
+      <div class="tstep">
+        <span class="tag">Agendamento</span>
+        <h3>Convite para a avaliação</h3>
+        <p>Apresente a avaliação como o próximo passo natural, não como uma venda. Ofereça no máximo duas opções de horário para facilitar a decisão.</p>
       </div>
-      <div class="chartcard">
-        <h4>Conversão por SDR (vendas fechadas)</h4>
-        <canvas id="chartConversaoSdr"></canvas>
+      <div class="tstep">
+        <span class="tag">Confirmação</span>
+        <h3>Lembrete e confirmação da véspera</h3>
+        <p>A maior parte das faltas acontece por esquecimento, não por desistência. Confirmar reduz falta e mostra cuidado.</p>
       </div>
-      <div class="chartcard wide">
-        <h4>Comparativo semanal &middot; leads, calls agendadas e vendas</h4>
-        <canvas id="chartSemanal"></canvas>
+      <div class="tstep">
+        <span class="tag">Recepção</span>
+        <h3>Avaliação presencial</h3>
+        <p>O momento em que a confiança construída à distância vira decisão. Recepção calorosa, pontualidade e ambiente cuidam do resto.</p>
       </div>
-    </div>
-
-    <div class="rankwrap">
-      <table>
-        <thead>
-          <tr>
-            <th>#</th><th>SDR</th><th class="muted">Leads</th><th class="muted">Respondidas</th>
-            <th class="muted">Taxa resposta</th><th class="muted">Calls agendadas</th>
-            <th class="muted">Comparecimento</th><th class="muted">Vendas</th><th class="muted">Conversão geral</th>
-          </tr>
-        </thead>
-        <tbody id="rankBody"></tbody>
-      </table>
+      <div class="tstep">
+        <span class="tag">Conversão</span>
+        <h3>Da avaliação para o procedimento</h3>
+        <p>Depois da avaliação, reforce o que foi identificado e apresente o plano com clareza, sem pressa, com uma pergunta de fechamento natural.</p>
+      </div>
+      <div class="tstep">
+        <span class="tag">Pós-atendimento</span>
+        <h3>Cuidado depois do sim</h3>
+        <p>Mensagem de acompanhamento após o procedimento e lembrete de retorno. Paciente bem cuidado depois vira indicação.</p>
+      </div>
     </div>
   </section>
 
-  <!-- ================= CRM ================= -->
-  <section class="view" id="view-crm">
-    <div class="eyebrow">Leads agendados</div>
-    <h2 class="headline">Toda call marcada, <em>num só lugar</em></h2>
-    <p class="lede">Nome, Instagram e horário da call, com etiqueta de status pra acompanhar até fechar ou descartar.</p>
+  <section class="slide" id="s3">
+    <div class="num">03 &mdash; Cadência de Follow Up</div>
+    <h2 class="headline">Quem <em>acompanha</em> agenda. Quem some, perde.</h2>
+    <p class="lede">Follow up não é insistência, é cuidado. A régua existe para nenhum paciente ficar esquecido, e para que cada contato traga algo novo, nunca uma cobrança.</p>
+    <div class="stats">
+      <div class="stat"><strong>21x</strong><span>mais chance de resposta quando o contato acontece nos primeiros 5 minutos</span></div>
+      <div class="stat"><strong>80%</strong><span>dos agendamentos exigem pelo menos algumas tentativas de contato depois do primeiro toque</span></div>
+      <div class="stat"><strong>92%</strong><span>das equipes desistem cedo demais, mesmo sabendo que a maioria das pessoas hesita antes de decidir</span></div>
+    </div>
+    <table class="cadence">
+      <tr><th>Situação</th><th>Ação</th><th>Objetivo</th></tr>
+      <tr><td>Lead não respondeu</td><td>Novo toque em até 24h, tom leve</td><td class="muted">Reabrir a conversa sem soar como cobrança</td></tr>
+      <tr><td>Agendou e sumiu</td><td>Confirmação na véspera e no dia</td><td class="muted">Reduzir falta por esquecimento</td></tr>
+      <tr><td>Faltou à avaliação</td><td>Contato no mesmo dia com novo horário</td><td class="muted">Recuperar antes que o interesse esfrie</td></tr>
+      <tr><td>Avaliou e não fechou</td><td>Follow up em 3 dias com conteúdo de valor</td><td class="muted">Tirar dúvida real, não pressionar</td></tr>
+      <tr><td>Disse "vou pensar"</td><td>Novo contato em 7 dias</td><td class="muted">Trazer novidade, nunca repetir a mesma mensagem</td></tr>
+      <tr><td>Lead frio</td><td>Reaquecimento mensal</td><td class="muted">Manter a clínica presente até o timing certo</td></tr>
+    </table>
+  </section>
 
-    <div class="formcard" style="margin-bottom:3.5vh;">
-      <div class="fgrid">
-        <div class="field">
-          <label>Nome</label>
-          <input type="text" id="c_nome" placeholder="nome do lead">
-        </div>
-        <div class="field">
-          <label>Instagram</label>
-          <input type="text" id="c_ig" placeholder="@perfil">
-        </div>
-        <div class="field"></div>
-
-        <div class="field">
-          <label>Data da call</label>
-          <input type="date" id="c_data">
-        </div>
-        <div class="field">
-          <label>Horário</label>
-          <input type="time" id="c_hora">
-        </div>
-        <div class="field">
-          <label>Status</label>
-          <select id="c_status"></select>
-        </div>
-
-        <div class="field full">
-          <label>Observações</label>
-          <textarea id="c_obs" placeholder="contexto da call, dúvidas do lead, próximos passos..."></textarea>
-        </div>
+  <section class="slide" id="s4">
+    <div class="num">04 &mdash; Objeções do Paciente</div>
+    <h2 class="headline">Toda dúvida é uma <em>pergunta disfarçada</em></h2>
+    <p class="lede">O método de 3 passos para responder preço, medo e "vou pensar" sem soar defensivo.</p>
+    <div class="aaa">
+      <div class="step">
+        <div class="letter">A</div>
+        <h4>Reconhecer</h4>
+        <p>Repita a preocupação com as próprias palavras do paciente. Ele precisa sentir que foi ouvido antes de qualquer resposta.</p>
       </div>
-      <div class="formfoot">
-        <div style="display:flex; gap:10px; align-items:center;">
-          <button class="btn" id="crmSaveBtn">Salvar lead</button>
-          <button class="btn ghost" id="crmCancelBtn" style="display:none;">Cancelar edição</button>
-          <span class="savemsg" id="crmSaveMsg">Salvo com sucesso.</span>
-        </div>
+      <div class="step">
+        <div class="letter">A</div>
+        <h4>Validar</h4>
+        <p>Trate a dúvida como natural, nunca como problema. "Faz todo sentido você perguntar isso antes de decidir."</p>
+      </div>
+      <div class="step">
+        <div class="letter">A</div>
+        <h4>Perguntar</h4>
+        <p>Devolva uma pergunta que revele o que realmente preocupa por trás da objeção, e continue conduzindo a conversa a partir da resposta.</p>
       </div>
     </div>
+    <p class="quote">"O objetivo não é convencer o paciente. É entender a hesitação tão bem que ele mesmo chega na decisão."</p>
+  </section>
 
-    <div class="statuschips" id="statusChips"></div>
-
-    <div class="crmtable-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Nome</th><th>Instagram</th><th class="muted">Data</th><th class="muted">Horário</th>
-            <th class="muted">Status</th><th class="muted">Obs.</th><th></th>
-          </tr>
-        </thead>
-        <tbody id="crmBody"></tbody>
-      </table>
-      <div class="empty" id="crmEmpty" style="display:none;">Nenhum lead agendado ainda.</div>
+  <section class="slide" id="s5">
+    <div class="num">05 &mdash; Comparecimento e Conversão</div>
+    <h2 class="headline">Mais agendamento não é a única saída</h2>
+    <p class="lede">Aumentar o faturamento da clínica também vem de quem já chegou até a porta. Comparecimento e conversão da avaliação valem tanto quanto captar lead novo.</p>
+    <div class="cards">
+      <div class="card">
+        <div class="k">01</div>
+        <h4>Reduza a falta</h4>
+        <p>Confirmação na véspera e lembrete no dia recuperam boa parte das avaliações que seriam perdidas por esquecimento.</p>
+      </div>
+      <div class="card">
+        <div class="k">02</div>
+        <h4>Explique o valor antes do preço</h4>
+        <p>Nunca apresente o investimento isolado. Sempre depois de reforçar o resultado esperado e o que foi identificado na avaliação.</p>
+      </div>
+      <div class="card">
+        <div class="k">03</div>
+        <h4>Cuide de quem já fechou</h4>
+        <p>Paciente bem acompanhado no pós procedimento retorna e indica. Fidelização custa menos do que captar um lead novo.</p>
+      </div>
     </div>
   </section>
 
-  <!-- ================= HISTÓRICO ================= -->
-  <section class="view" id="view-historico">
-    <div class="eyebrow">Registros</div>
-    <h2 class="headline">Todo dia <em>lançado</em>, um por um</h2>
-    <p class="lede">Use para conferir, corrigir ou exportar. Enquanto o Supabase não está plugado, exporte em CSV para consolidar os dados de todos os SDRs num só arquivo.</p>
-
-    <div class="histtoolbar">
-      <div style="display:flex; gap:10px;">
-        <button class="btn small ghost" id="exportBtn">Exportar CSV</button>
-        <button class="btn small ghost" id="importBtn">Importar CSV</button>
-        <input type="file" id="importFile" accept=".csv">
-      </div>
-      <button class="btn small ghost" id="clearAllBtn" style="color:var(--red); border-color:var(--red);">Apagar tudo</button>
-    </div>
-
-    <div class="histtable-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Data</th><th>SDR</th><th class="muted">Leads</th><th class="muted">Follow-ups</th>
-            <th class="muted">Respondidas</th><th class="muted">Positivas</th><th class="muted">Negativas</th>
-            <th class="muted">Convites</th><th class="muted">Agendadas</th><th class="muted">Realizadas</th>
-            <th class="muted">Propostas</th><th class="muted">Vendas</th><th class="muted">Obs.</th><th></th>
-          </tr>
-        </thead>
-        <tbody id="histBody"></tbody>
-      </table>
-      <div class="empty" id="histEmpty" style="display:none;">Nenhum registro ainda. Lance o primeiro dia na aba "Lançar dia".</div>
+  <section class="slide" id="s6">
+    <div class="num">06 &mdash; Rotina do Atendimento</div>
+    <h2 class="headline">O <em>ritmo do dia</em> evita que paciente se perca</h2>
+    <div class="dayflow">
+      <div class="dayrow"><div class="time">Manhã</div><div class="desc"><strong>Confirmação</strong> dos agendamentos do dia e resposta aos contatos que chegaram durante a noite</div></div>
+      <div class="dayrow"><div class="time">Meio-dia</div><div class="desc"><strong>Follow up</strong> de leads parados e de avaliações feitas nos últimos dias</div></div>
+      <div class="dayrow"><div class="time">Tarde</div><div class="desc"><strong>Recepção</strong> das avaliações e acompanhamento das conversões do dia</div></div>
+      <div class="dayrow"><div class="time">Fim do dia</div><div class="desc"><strong>Atualização</strong> do CRM ou planilha, e agenda de confirmações para amanhã</div></div>
     </div>
   </section>
 
-</main>
+  <section class="slide" id="s7">
+    <div class="num">07 &mdash; Organização</div>
+    <h2 class="headline">Se não está <em>registrado</em>, não aconteceu</h2>
+    <p class="lede">CRM ou planilha, o formato importa menos do que a disciplina de manter tudo atualizado no mesmo dia.</p>
+    <div class="crm-mock">
+      <div class="crm-top"><span></span><span></span><span></span></div>
+      <div class="crm-cols">
+        <div class="crm-col">
+          <h5>Novo contato</h5>
+          <div class="crm-card">Paciente Ana P.<small>Direct &middot; hoje</small></div>
+          <div class="crm-card">Paciente Marcos S.<small>Indicação &middot; hoje</small></div>
+        </div>
+        <div class="crm-col">
+          <h5>Agendado</h5>
+          <div class="crm-card">Paciente Julia R.<small>Avaliação &middot; qui 15h</small></div>
+        </div>
+        <div class="crm-col">
+          <h5>Avaliado</h5>
+          <div class="crm-card">Paciente Bruno T.<small>Follow up em 3 dias</small></div>
+        </div>
+        <div class="crm-col">
+          <h5>Convertido</h5>
+          <div class="crm-card">Paciente Carla M.<small>Procedimento marcado</small></div>
+        </div>
+      </div>
+    </div>
+    <p class="lede" style="margin-top:2.5vh; margin-bottom:0;">Campos que nunca podem ficar em branco: data do próximo contato, resumo da última conversa e etapa atual.</p>
+  </section>
 
-<footer>Sales Mind &middot; Painel Comercial &middot; dados salvos localmente neste navegador até a integração com Supabase</footer>
+  <section class="slide" id="sEnd">
+    <div class="num">08 &mdash; Encerramento</div>
+    <h2 class="serif" style="font-size:clamp(2rem,4.5vw,3.4rem); max-width:19ch;">Um bom atendimento não fecha uma venda. Ele constrói confiança que vira agenda cheia.</h2>
+    <p class="lede" style="margin-top:20px;">Os scripts de cada etapa vêm em seguida, prontos e alinhados. A partir de agora, cada conversa segue esse caminho.</p>
+    <div class="sign">
+      <strong>Sales Mind</strong>
+      Treinamento de Atendimento &middot; Carolina Souza
+    </div>
+  </section>
+
+</div>
 
 <script>
-/* ============ STORAGE ============ */
-// Camada segura: usa localStorage quando disponível (ex.: site publicado no Netlify).
-// Se o navegador/ambiente bloquear localStorage (ex.: preview em iframe), cai para
-// memória temporária, evitando que o app quebre — só não persiste entre sessões nesse caso.
-const ENTRIES_KEY = 'salesmind_sdr_entries_v1';
-const SDRS_KEY = 'salesmind_sdr_names_v1';
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const dotsWrap = document.getElementById('dots');
+  const cNow = document.getElementById('cNow');
+  const cTotal = document.getElementById('cTotal');
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  let current = 0;
 
-const safeStorage = (function(){
-  let usable = false;
-  try{
-    const t = '__sm_test__';
-    window.localStorage.setItem(t, '1');
-    window.localStorage.removeItem(t);
-    usable = true;
-  }catch(e){ usable = false; }
+  cTotal.textContent = String(slides.length).padStart(2,'0');
 
-  const memory = {};
-
-  return {
-    isPersistent: usable,
-    getItem(key){
-      if(usable){
-        try{ return window.localStorage.getItem(key); }
-        catch(e){ return memory[key] !== undefined ? memory[key] : null; }
-      }
-      return memory[key] !== undefined ? memory[key] : null;
-    },
-    setItem(key, value){
-      if(usable){
-        try{ window.localStorage.setItem(key, value); return; }
-        catch(e){ /* fall through to memory */ }
-      }
-      memory[key] = value;
-    }
-  };
-})();
-
-function loadEntries(){
-  try{
-    const raw = safeStorage.getItem(ENTRIES_KEY);
-    return raw ? JSON.parse(raw) : [];
-  }catch(e){ console.error('Erro ao ler registros', e); return []; }
-}
-function saveEntries(list){
-  try{ safeStorage.setItem(ENTRIES_KEY, JSON.stringify(list)); }
-  catch(e){ console.error('Erro ao salvar registros', e); }
-}
-function loadSdrs(){
-  try{
-    const raw = safeStorage.getItem(SDRS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  }catch(e){ return []; }
-}
-function saveSdrs(list){
-  try{ safeStorage.setItem(SDRS_KEY, JSON.stringify(list)); }
-  catch(e){ console.error('Erro ao salvar SDRs', e); }
-}
-
-const CRM_KEY = 'salesmind_crm_leads_v1';
-function loadCrm(){
-  try{
-    const raw = safeStorage.getItem(CRM_KEY);
-    return raw ? JSON.parse(raw) : [];
-  }catch(e){ console.error('Erro ao ler leads', e); return []; }
-}
-function saveCrm(list){
-  try{ safeStorage.setItem(CRM_KEY, JSON.stringify(list)); }
-  catch(e){ console.error('Erro ao salvar leads', e); }
-}
-
-const STATUS_OPTIONS = [
-  { key:'agendada', label:'Reunião agendada', color:'var(--gold)' },
-  { key:'feita', label:'Reunião feita', color:'var(--gold-soft)' },
-  { key:'esperando', label:'Esperando retorno', color:'var(--muted)' },
-  { key:'followup', label:'Follow-up necessário', color:'var(--amber)' },
-  { key:'aprovado', label:'Cliente aprovado', color:'var(--green)' },
-  { key:'negado', label:'Cliente negado', color:'var(--red)' },
-];
-function statusInfo(key){ return STATUS_OPTIONS.find(s=>s.key===key) || STATUS_OPTIONS[0]; }
-
-let entries = loadEntries();
-let sdrs = loadSdrs();
-let currentSdr = sdrs[0] || '';
-let crmLeads = loadCrm();
-let crmEditingId = null;
-let crmStatusFilter = 'all';
-
-const FIELDS = ['leads','followups','respondidas','positivas','negativas','convites','agendadas','realizadas','propostas','vendas'];
-
-/* ============ TABS ============ */
-const tabsEl = document.getElementById('tabs');
-tabsEl.addEventListener('click', (e)=>{
-  const btn = e.target.closest('button[data-view]');
-  if(!btn) return;
-  document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  document.querySelectorAll('section.view').forEach(s=>s.classList.remove('active'));
-  document.getElementById('view-'+btn.dataset.view).classList.add('active');
-  if(btn.dataset.view === 'dashboard') renderDashboard();
-  if(btn.dataset.view === 'historico') renderHistory();
-  if(btn.dataset.view === 'crm') renderCrm();
-});
-
-/* ============ WHOAMI (SDR selector) ============ */
-const whoSelect = document.getElementById('whoSelect');
-const whoNew = document.getElementById('whoNew');
-const whoAdd = document.getElementById('whoAdd');
-
-function renderWhoSelect(){
-  whoSelect.innerHTML = '';
-  if(sdrs.length === 0){
-    const opt = document.createElement('option');
-    opt.textContent = 'adicione um SDR ->';
-    opt.value = '';
-    whoSelect.appendChild(opt);
-  }
-  sdrs.forEach(name=>{
-    const opt = document.createElement('option');
-    opt.value = name; opt.textContent = name;
-    if(name === currentSdr) opt.selected = true;
-    whoSelect.appendChild(opt);
+  slides.forEach((s,i)=>{
+    const d = document.createElement('button');
+    d.addEventListener('click', ()=> go(i));
+    dotsWrap.appendChild(d);
   });
-  document.getElementById('f_sdr').value = currentSdr;
-}
-whoSelect.addEventListener('change', ()=>{
-  currentSdr = whoSelect.value;
-  document.getElementById('f_sdr').value = currentSdr;
-});
-whoAdd.addEventListener('click', ()=>{
-  const name = whoNew.value.trim();
-  if(!name) return;
-  if(!sdrs.includes(name)) sdrs.push(name);
-  saveSdrs(sdrs);
-  currentSdr = name;
-  whoNew.value = '';
-  renderWhoSelect();
-  populateSdrFilter();
-});
-renderWhoSelect();
+  const dots = Array.from(dotsWrap.children);
 
-/* ============ FORM: LANÇAR DIA ============ */
-const dateInput = document.getElementById('f_date');
-(function setToday(){
-  const d = new Date();
-  const iso = d.toISOString().slice(0,10);
-  dateInput.value = iso;
-})();
-
-document.getElementById('saveBtn').addEventListener('click', ()=>{
-  const sdr = currentSdr;
-  if(!sdr){ alert('Selecione ou adicione um SDR antes de salvar.'); return; }
-  const date = dateInput.value;
-  if(!date){ alert('Selecione a data.'); return; }
-
-  const getNum = id => Math.max(0, parseInt(document.getElementById(id).value || '0', 10));
-
-  const entry = {
-    id: date + '__' + sdr,
-    date, sdr,
-    leads: getNum('f_leads'),
-    followups: getNum('f_followups'),
-    respondidas: getNum('f_respondidas'),
-    positivas: getNum('f_positivas'),
-    negativas: getNum('f_negativas'),
-    convites: getNum('f_convites'),
-    agendadas: getNum('f_agendadas'),
-    realizadas: getNum('f_realizadas'),
-    propostas: getNum('f_propostas'),
-    vendas: getNum('f_vendas'),
-    obs: document.getElementById('f_obs').value.trim()
-  };
-
-  const existingIdx = entries.findIndex(e=>e.id === entry.id);
-  if(existingIdx >= 0){
-    entries[existingIdx] = entry;
-    document.getElementById('editingNote').textContent = 'Já existia um lançamento para ' + sdr + ' em ' + fmtDate(date) + ' — foi atualizado.';
-  }else{
-    entries.push(entry);
-    document.getElementById('editingNote').textContent = '';
-  }
-  saveEntries(entries);
-
-  FIELDS.forEach(f=>{ document.getElementById('f_'+f).value = ''; });
-  document.getElementById('f_obs').value = '';
-
-  const msg = document.getElementById('saveMsg');
-  msg.classList.add('show');
-  setTimeout(()=>msg.classList.remove('show'), 2200);
-});
-
-/* ============ HELPERS ============ */
-function fmtDate(iso){
-  const [y,m,d] = iso.split('-');
-  return d+'/'+m+'/'+y;
-}
-function pct(num, den){
-  if(!den || den <= 0) return 0;
-  return Math.round((num/den)*1000)/10;
-}
-function isoWeek(dateStr){
-  const d = new Date(dateStr+'T00:00:00');
-  const day = (d.getDay()+6)%7;
-  d.setDate(d.getDate()-day+3);
-  const firstThu = new Date(d.getFullYear(),0,4);
-  const week = 1 + Math.round(((d - firstThu)/86400000 - 3 + ((firstThu.getDay()+6)%7))/7);
-  return d.getFullYear()+'-S'+String(week).padStart(2,'0');
-}
-function daysAgo(n){
-  const d = new Date();
-  d.setDate(d.getDate()-n);
-  return d.toISOString().slice(0,10);
-}
-function sum(list, key){ return list.reduce((a,e)=>a+(e[key]||0),0); }
-
-/* ============ FILTERS ============ */
-function populateSdrFilter(){
-  const sel = document.getElementById('sdrFilter');
-  const current = sel.value;
-  sel.innerHTML = '<option value="all">Todos os SDRs</option>';
-  sdrs.forEach(name=>{
-    const opt = document.createElement('option');
-    opt.value = name; opt.textContent = name;
-    sel.appendChild(opt);
-  });
-  if([...sel.options].some(o=>o.value===current)) sel.value = current;
-}
-populateSdrFilter();
-document.getElementById('periodFilter').addEventListener('change', renderDashboard);
-document.getElementById('sdrFilter').addEventListener('change', renderDashboard);
-
-function getFilteredEntries(){
-  const period = document.getElementById('periodFilter').value;
-  const sdrSel = document.getElementById('sdrFilter').value;
-  let list = entries.slice();
-  if(period !== 'all'){
-    const cutoff = daysAgo(parseInt(period,10));
-    list = list.filter(e => e.date >= cutoff);
-  }
-  if(sdrSel !== 'all'){
-    list = list.filter(e => e.sdr === sdrSel);
-  }
-  return list.sort((a,b)=> a.date.localeCompare(b.date));
-}
-
-/* ============ CHARTS (instances kept to destroy/redraw) ============ */
-let charts = {};
-function destroyChart(key){ if(charts[key]){ charts[key].destroy(); delete charts[key]; } }
-
-const GOLD = '#c9a84c';
-const GOLD_SOFT = '#c4995f';
-const CREAM = '#f5efe2';
-const MUTED = '#948d7c';
-const LINE = 'rgba(201,168,76,0.12)';
-
-if(typeof Chart !== 'undefined'){
-  Chart.defaults.font.family = "'DM Sans', sans-serif";
-  Chart.defaults.color = MUTED;
-}
-function baseGrid(){
-  return { grid:{ color:LINE }, ticks:{ color:MUTED, font:{size:10} } };
-}
-
-/* ============ DASHBOARD RENDER ============ */
-function renderDashboard(){
-  const list = getFilteredEntries();
-
-  // KPIs
-  const totLeads = sum(list,'leads');
-  const totRespondidas = sum(list,'respondidas');
-  const totPositivas = sum(list,'positivas');
-  const totConvites = sum(list,'convites');
-  const totAgendadas = sum(list,'agendadas');
-  const totRealizadas = sum(list,'realizadas');
-  const totPropostas = sum(list,'propostas');
-  const totVendas = sum(list,'vendas');
-
-  const kpis = [
-    { v: totLeads, l:'Leads prospectados' },
-    { v: pct(totRespondidas, totLeads)+'%', l:'Taxa de resposta' },
-    { v: pct(totPositivas, totRespondidas)+'%', l:'Taxa de respostas positivas' },
-    { v: pct(totAgendadas, totConvites)+'%', l:'Taxa de agendamento de calls' },
-    { v: pct(totRealizadas, totAgendadas)+'%', l:'Comparecimento em calls' },
-    { v: totPropostas, l:'Propostas enviadas' },
-    { v: totVendas, l:'Vendas fechadas' },
-    { v: pct(totVendas, totLeads)+'%', l:'Conversão geral (lead → venda)' },
-  ];
-  document.getElementById('kpiRow').innerHTML = kpis.map(k=>
-    `<div class="kpi"><div class="v">${k.v}</div><div class="l">${k.l}</div></div>`
-  ).join('');
-
-  // Funil
-  const stages = [
-    { name:'Leads prospectados', val: totLeads },
-    { name:'Mensagens respondidas', val: totRespondidas },
-    { name:'Respostas positivas', val: totPositivas },
-    { name:'Convites p/ call enviados', val: totConvites },
-    { name:'Calls agendadas', val: totAgendadas },
-    { name:'Calls realizadas', val: totRealizadas },
-    { name:'Propostas enviadas', val: totPropostas },
-    { name:'Vendas fechadas', val: totVendas },
-  ];
-  const maxVal = Math.max(1, ...stages.map(s=>s.val));
-  document.getElementById('funnelBody').innerHTML = stages.map((s,i)=>{
-    const width = Math.round((s.val/maxVal)*100);
-    const dropPct = i===0 ? 100 : pct(s.val, stages[0].val);
-    return `<div class="fstage">
-      <div class="fname">${s.name}</div>
-      <div class="fbarwrap"><div class="fbar" style="width:${width}%"></div></div>
-      <div class="fval">${s.val}</div>
-      <div class="fpct">${dropPct}% do topo</div>
-    </div>`;
-  }).join('');
-
-  // Series por dia
-  const byDay = {};
-  list.forEach(e=>{
-    if(!byDay[e.date]) byDay[e.date] = { leads:0, respondidas:0, agendadas:0, vendas:0 };
-    byDay[e.date].leads += e.leads;
-    byDay[e.date].respondidas += e.respondidas;
-    byDay[e.date].agendadas += e.agendadas;
-    byDay[e.date].vendas += e.vendas;
-  });
-  const days = Object.keys(byDay).sort();
-  const dayLabels = days.map(d=>fmtDate(d));
-
-  const bySdr = {};
-  list.forEach(e=>{
-    if(!bySdr[e.sdr]) bySdr[e.sdr] = { leads:0, respondidas:0, agendadas:0, realizadas:0, vendas:0 };
-    FIELDS.forEach(f=>{ if(bySdr[e.sdr][f] !== undefined) bySdr[e.sdr][f] += e[f]; });
-  });
-  const sdrNames = Object.keys(bySdr);
-
-  const byWeek = {};
-  list.forEach(e=>{
-    const w = isoWeek(e.date);
-    if(!byWeek[w]) byWeek[w] = { leads:0, agendadas:0, vendas:0 };
-    byWeek[w].leads += e.leads; byWeek[w].agendadas += e.agendadas; byWeek[w].vendas += e.vendas;
-  });
-  const weeks = Object.keys(byWeek).sort();
-
-  if(typeof Chart === 'undefined'){
-    document.querySelectorAll('.chartcard').forEach(card=>{
-      const canvas = card.querySelector('canvas');
-      if(canvas) canvas.style.display = 'none';
-      if(!card.querySelector('.chartfallback')){
-        const p = document.createElement('p');
-        p.className = 'chartfallback';
-        p.style.cssText = 'color:var(--muted); font-size:0.82rem;';
-        p.textContent = 'Gráficos indisponíveis neste preview (biblioteca não carregou). Funcionam normalmente no site publicado.';
-        card.appendChild(p);
-      }
+  function render(){
+    slides.forEach((s,i)=>{
+      s.classList.remove('active','prevslide');
+      if(i===current) s.classList.add('active');
+      else if(i<current) s.classList.add('prevslide');
     });
-  }else{
-    try{
-      destroyChart('leads');
-      charts.leads = new Chart(document.getElementById('chartLeads'), {
-        type:'bar',
-        data:{ labels:dayLabels, datasets:[{ data: days.map(d=>byDay[d].leads), backgroundColor: GOLD, borderRadius:2 }] },
-        options:{ plugins:{legend:{display:false}}, scales:{ x:baseGrid(), y:baseGrid() } }
-      });
-
-      destroyChart('taxaResposta');
-      const taxaSeries = days.map(d=> pct(byDay[d].respondidas, byDay[d].leads) );
-      charts.taxaResposta = new Chart(document.getElementById('chartTaxaResposta'), {
-        type:'line',
-        data:{ labels:dayLabels, datasets:[{ data:taxaSeries, borderColor:GOLD, backgroundColor:'rgba(201,168,76,0.15)', fill:true, tension:0.35, pointRadius:2 }] },
-        options:{ plugins:{legend:{display:false}}, scales:{ x:baseGrid(), y:Object.assign(baseGrid(),{ suggestedMax:100 }) } }
-      });
-
-      destroyChart('calls');
-      charts.calls = new Chart(document.getElementById('chartCalls'), {
-        type:'bar',
-        data:{ labels:dayLabels, datasets:[{ data: days.map(d=>byDay[d].agendadas), backgroundColor: GOLD_SOFT, borderRadius:2 }] },
-        options:{ plugins:{legend:{display:false}}, scales:{ x:baseGrid(), y:baseGrid() } }
-      });
-
-      destroyChart('conversaoSdr');
-      charts.conversaoSdr = new Chart(document.getElementById('chartConversaoSdr'), {
-        type:'bar',
-        data:{ labels:sdrNames, datasets:[{ data: sdrNames.map(n=>bySdr[n].vendas), backgroundColor: GOLD, borderRadius:2 }] },
-        options:{ indexAxis:'y', plugins:{legend:{display:false}}, scales:{ x:baseGrid(), y:baseGrid() } }
-      });
-
-      destroyChart('semanal');
-      charts.semanal = new Chart(document.getElementById('chartSemanal'), {
-        type:'bar',
-        data:{
-          labels: weeks,
-          datasets:[
-            { label:'Leads', data: weeks.map(w=>byWeek[w].leads), backgroundColor: 'rgba(201,168,76,0.85)', borderRadius:2 },
-            { label:'Calls agendadas', data: weeks.map(w=>byWeek[w].agendadas), backgroundColor: 'rgba(196,153,95,0.75)', borderRadius:2 },
-            { label:'Vendas', data: weeks.map(w=>byWeek[w].vendas), backgroundColor: 'rgba(245,239,226,0.55)', borderRadius:2 },
-          ]
-        },
-        options:{ plugins:{legend:{labels:{color:CREAM, font:{size:11}}}}, scales:{ x:baseGrid(), y:baseGrid() } }
-      });
-    }catch(err){
-      console.error('Erro ao desenhar gráficos', err);
-    }
+    dots.forEach((d,i)=> d.classList.toggle('active', i===current));
+    cNow.textContent = String(current+1).padStart(2,'0');
+    prevBtn.disabled = current===0;
+    nextBtn.disabled = current===slides.length-1;
   }
 
-  // Ranking table
-  const rankRows = sdrNames.map(name=>{
-    const s = bySdr[name];
-    return {
-      name,
-      leads: s.leads,
-      respondidas: s.respondidas,
-      taxaResposta: pct(s.respondidas, s.leads),
-      agendadas: s.agendadas,
-      comparecimento: pct(s.realizadas, s.agendadas),
-      vendas: s.vendas,
-      conversaoGeral: pct(s.vendas, s.leads),
-    };
-  }).sort((a,b)=> b.vendas - a.vendas || b.conversaoGeral - a.conversaoGeral);
-
-  const medals = ['🥇','🥈','🥉'];
-  document.getElementById('rankBody').innerHTML = rankRows.length ? rankRows.map((r,i)=>`
-    <tr>
-      <td class="medal">${medals[i] || (i+1)}</td>
-      <td>${r.name}</td>
-      <td class="muted">${r.leads}</td>
-      <td class="muted">${r.respondidas}</td>
-      <td class="muted">${r.taxaResposta}%</td>
-      <td class="muted">${r.agendadas}</td>
-      <td class="muted">${r.comparecimento}%</td>
-      <td class="muted">${r.vendas}</td>
-      <td class="muted">${r.conversaoGeral}%</td>
-    </tr>
-  `).join('') : `<tr><td colspan="9" class="empty">Sem dados no período selecionado.</td></tr>`;
-}
-
-/* ============ HISTÓRICO ============ */
-function renderHistory(){
-  const sorted = entries.slice().sort((a,b)=> b.date.localeCompare(a.date));
-  const body = document.getElementById('histBody');
-  const empty = document.getElementById('histEmpty');
-  if(sorted.length === 0){
-    body.innerHTML = '';
-    empty.style.display = 'block';
-    return;
+  function go(i){
+    current = Math.max(0, Math.min(slides.length-1, i));
+    render();
   }
-  empty.style.display = 'none';
-  body.innerHTML = sorted.map(e=>`
-    <tr>
-      <td>${fmtDate(e.date)}</td>
-      <td>${e.sdr}</td>
-      <td class="muted">${e.leads}</td>
-      <td class="muted">${e.followups}</td>
-      <td class="muted">${e.respondidas}</td>
-      <td class="muted">${e.positivas}</td>
-      <td class="muted">${e.negativas}</td>
-      <td class="muted">${e.convites}</td>
-      <td class="muted">${e.agendadas}</td>
-      <td class="muted">${e.realizadas}</td>
-      <td class="muted">${e.propostas}</td>
-      <td class="muted">${e.vendas}</td>
-      <td class="muted" style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${e.obs || ''}</td>
-      <td><button class="rowdel" data-id="${e.id}">apagar</button></td>
-    </tr>
-  `).join('');
 
-  body.querySelectorAll('.rowdel').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      entries = entries.filter(e=>e.id !== btn.dataset.id);
-      saveEntries(entries);
-      renderHistory();
-    });
+  prevBtn.addEventListener('click', ()=> go(current-1));
+  nextBtn.addEventListener('click', ()=> go(current+1));
+
+  document.addEventListener('keydown', (e)=>{
+    if(e.key==='ArrowRight' || e.key===' ') go(current+1);
+    if(e.key==='ArrowLeft') go(current-1);
   });
-}
 
-document.getElementById('clearAllBtn').addEventListener('click', ()=>{
-  if(!confirm('Apagar todos os registros deste navegador? Essa ação não pode ser desfeita.')) return;
-  entries = [];
-  saveEntries(entries);
-  renderHistory();
-});
-
-/* ============ CSV EXPORT / IMPORT ============ */
-const CSV_HEADERS = ['date','sdr','leads','followups','respondidas','positivas','negativas','convites','agendadas','realizadas','propostas','vendas','obs'];
-
-function toCsv(list){
-  const lines = [CSV_HEADERS.join(',')];
-  list.forEach(e=>{
-    const row = CSV_HEADERS.map(h=>{
-      let v = e[h] !== undefined ? e[h] : '';
-      v = String(v).replace(/"/g,'""');
-      if(v.includes(',') || v.includes('"') || v.includes('\n')) v = '"'+v+'"';
-      return v;
-    });
-    lines.push(row.join(','));
+  let touchStartX = null;
+  document.addEventListener('touchstart', (e)=>{ touchStartX = e.touches[0].clientX; });
+  document.addEventListener('touchend', (e)=>{
+    if(touchStartX===null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if(dx > 50) go(current-1);
+    if(dx < -50) go(current+1);
+    touchStartX = null;
   });
-  return lines.join('\n');
-}
-function parseCsv(text){
-  const lines = text.split(/\r?\n/).filter(l=>l.trim().length);
-  const headers = lines[0].split(',').map(h=>h.trim());
-  const rows = [];
-  for(let i=1;i<lines.length;i++){
-    const cells = [];
-    let cur = '', inQuotes = false;
-    const line = lines[i];
-    for(let j=0;j<line.length;j++){
-      const ch = line[j];
-      if(ch === '"'){
-        if(inQuotes && line[j+1] === '"'){ cur+='"'; j++; }
-        else inQuotes = !inQuotes;
-      }else if(ch === ',' && !inQuotes){
-        cells.push(cur); cur='';
-      }else cur += ch;
-    }
-    cells.push(cur);
-    const obj = {};
-    headers.forEach((h,idx)=> obj[h] = cells[idx] !== undefined ? cells[idx] : '');
-    ['leads','followups','respondidas','positivas','negativas','convites','agendadas','realizadas','propostas','vendas'].forEach(f=>{
-      obj[f] = parseInt(obj[f]||'0',10) || 0;
-    });
-    obj.id = obj.date + '__' + obj.sdr;
-    rows.push(obj);
-  }
-  return rows;
-}
 
-document.getElementById('exportBtn').addEventListener('click', ()=>{
-  const csv = toCsv(entries.slice().sort((a,b)=>a.date.localeCompare(b.date)));
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'salesmind_sdr_'+ new Date().toISOString().slice(0,10) +'.csv';
-  a.click();
-  URL.revokeObjectURL(url);
-});
-
-document.getElementById('importBtn').addEventListener('click', ()=>{
-  document.getElementById('importFile').click();
-});
-document.getElementById('importFile').addEventListener('change', (e)=>{
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    try{
-      const imported = parseCsv(reader.result);
-      let added = 0, updated = 0;
-      imported.forEach(row=>{
-        const idx = entries.findIndex(x=>x.id === row.id);
-        if(idx >= 0){ entries[idx] = row; updated++; }
-        else{ entries.push(row); added++; }
-        if(row.sdr && !sdrs.includes(row.sdr)) sdrs.push(row.sdr);
-      });
-      saveEntries(entries);
-      saveSdrs(sdrs);
-      renderWhoSelect();
-      populateSdrFilter();
-      renderHistory();
-      alert('Importação concluída: '+added+' novos, '+updated+' atualizados.');
-    }catch(err){
-      console.error(err);
-      alert('Não foi possível ler esse CSV. Confira o formato e tente de novo.');
-    }
-    e.target.value = '';
-  };
-  reader.readAsText(file);
-});
-
-/* ============ CRM ============ */
-function populateStatusSelect(){
-  const sel = document.getElementById('c_status');
-  sel.innerHTML = STATUS_OPTIONS.map(s=>`<option value="${s.key}">${s.label}</option>`).join('');
-}
-populateStatusSelect();
-
-function renderStatusChips(){
-  const wrap = document.getElementById('statusChips');
-  const allChip = `<div class="chip ${crmStatusFilter==='all'?'active':''}" data-key="all"><span class="dot" style="background:var(--cream)"></span>Todos</div>`;
-  const chips = STATUS_OPTIONS.map(s=>{
-    const count = crmLeads.filter(l=>l.status===s.key).length;
-    return `<div class="chip ${crmStatusFilter===s.key?'active':''}" data-key="${s.key}">
-      <span class="dot" style="background:${s.color}"></span>${s.label} (${count})
-    </div>`;
-  }).join('');
-  wrap.innerHTML = allChip + chips;
-  wrap.querySelectorAll('.chip').forEach(chip=>{
-    chip.addEventListener('click', ()=>{
-      crmStatusFilter = chip.dataset.key;
-      renderCrm();
-    });
-  });
-}
-
-function normalizeIg(v){
-  v = (v||'').trim();
-  if(!v) return '';
-  return v.startsWith('@') ? v : '@'+v.replace(/^@+/,'');
-}
-
-function resetCrmForm(){
-  document.getElementById('c_nome').value = '';
-  document.getElementById('c_ig').value = '';
-  document.getElementById('c_data').value = new Date().toISOString().slice(0,10);
-  document.getElementById('c_hora').value = '';
-  document.getElementById('c_status').value = 'agendada';
-  document.getElementById('c_obs').value = '';
-  crmEditingId = null;
-  document.getElementById('crmSaveBtn').textContent = 'Salvar lead';
-  document.getElementById('crmCancelBtn').style.display = 'none';
-}
-resetCrmForm();
-
-document.getElementById('crmSaveBtn').addEventListener('click', ()=>{
-  const nome = document.getElementById('c_nome').value.trim();
-  if(!nome){ alert('Preencha o nome do lead.'); return; }
-  const lead = {
-    id: crmEditingId || (Date.now()+'_'+Math.random().toString(36).slice(2,7)),
-    nome,
-    ig: normalizeIg(document.getElementById('c_ig').value),
-    data: document.getElementById('c_data').value,
-    hora: document.getElementById('c_hora').value,
-    status: document.getElementById('c_status').value,
-    obs: document.getElementById('c_obs').value.trim(),
-  };
-  if(crmEditingId){
-    const idx = crmLeads.findIndex(l=>l.id===crmEditingId);
-    if(idx>=0) crmLeads[idx] = lead;
-  }else{
-    crmLeads.push(lead);
-  }
-  saveCrm(crmLeads);
-  resetCrmForm();
-  renderCrm();
-  const msg = document.getElementById('crmSaveMsg');
-  msg.classList.add('show');
-  setTimeout(()=>msg.classList.remove('show'), 2200);
-});
-
-document.getElementById('crmCancelBtn').addEventListener('click', resetCrmForm);
-
-function renderCrm(){
-  renderStatusChips();
-  const list = crmLeads
-    .filter(l => crmStatusFilter==='all' || l.status===crmStatusFilter)
-    .slice()
-    .sort((a,b)=> (a.data+a.hora).localeCompare(b.data+b.hora));
-
-  const body = document.getElementById('crmBody');
-  const empty = document.getElementById('crmEmpty');
-  if(list.length === 0){
-    body.innerHTML = '';
-    empty.style.display = 'block';
-    return;
-  }
-  empty.style.display = 'none';
-  body.innerHTML = list.map(l=>{
-    const s = statusInfo(l.status);
-    return `<tr>
-      <td>${l.nome}</td>
-      <td class="igcell">${l.ig || '—'}</td>
-      <td class="muted">${l.data ? fmtDate(l.data) : '—'}</td>
-      <td class="muted">${l.hora || '—'}</td>
-      <td><span class="badge"><span class="dot" style="background:${s.color}"></span>${s.label}</span></td>
-      <td class="muted" style="max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${l.obs || ''}</td>
-      <td style="white-space:nowrap;">
-        <button class="rowedit" data-id="${l.id}">editar</button>
-        <button class="rowdel" data-id="${l.id}">apagar</button>
-      </td>
-    </tr>`;
-  }).join('');
-
-  body.querySelectorAll('.rowedit').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const lead = crmLeads.find(l=>l.id===btn.dataset.id);
-      if(!lead) return;
-      document.getElementById('c_nome').value = lead.nome;
-      document.getElementById('c_ig').value = lead.ig;
-      document.getElementById('c_data').value = lead.data;
-      document.getElementById('c_hora').value = lead.hora;
-      document.getElementById('c_status').value = lead.status;
-      document.getElementById('c_obs').value = lead.obs;
-      crmEditingId = lead.id;
-      document.getElementById('crmSaveBtn').textContent = 'Atualizar lead';
-      document.getElementById('crmCancelBtn').style.display = 'inline-block';
-      document.querySelector('.formcard').scrollIntoView({ behavior:'smooth', block:'start' });
-    });
-  });
-  body.querySelectorAll('.rowdel').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      if(!confirm('Apagar este lead?')) return;
-      crmLeads = crmLeads.filter(l=>l.id!==btn.dataset.id);
-      saveCrm(crmLeads);
-      if(crmEditingId === btn.dataset.id) resetCrmForm();
-      renderCrm();
-    });
-  });
-}
-
-/* ============ INIT ============ */
-renderHistory();
-if(!safeStorage.isPersistent){
-  const foot = document.querySelector('footer');
-  if(foot) foot.innerHTML = 'Sales Mind &middot; Painel Comercial &middot; <span style="color:var(--gold-soft);">este preview não salva entre sessões — publicado no Netlify, os dados ficam salvos normalmente no navegador</span>';
-}
+  render();
 </script>
 
 </body>
