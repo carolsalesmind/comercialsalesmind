@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" crossorigin="anonymous"></script>
 <style>
   :root{
     --black:#0a0908;
@@ -209,6 +210,9 @@
 </header>
 
 <main>
+
+  <div id="loadingBanner" style="text-align:center; padding:16px 20px; color:var(--muted); font-size:0.82rem;">Sincronizando com o banco de dados...</div>
+  <div id="dbBanner" style="display:none; background:rgba(196,106,90,0.12); border:1px solid var(--red); color:var(--red); padding:14px 20px; margin-bottom:3vh; border-radius:3px; font-size:0.84rem;"></div>
 
   <!-- ================= LANÇAR DIA ================= -->
   <section class="view active" id="view-lancar">
@@ -447,78 +451,37 @@
 
 </main>
 
-<footer>Sales Mind &middot; Painel Comercial &middot; dados salvos localmente neste navegador até a integração com Supabase</footer>
+<footer>Sales Mind &middot; Painel Comercial &middot; conectado ao Supabase — todo mundo vê os mesmos dados em tempo real</footer>
 
 <script>
-/* ============ STORAGE ============ */
-// Camada segura: usa localStorage quando disponível (ex.: site publicado no Netlify).
-// Se o navegador/ambiente bloquear localStorage (ex.: preview em iframe), cai para
-// memória temporária, evitando que o app quebre — só não persiste entre sessões nesse caso.
-const ENTRIES_KEY = 'salesmind_sdr_entries_v1';
-const SDRS_KEY = 'salesmind_sdr_names_v1';
+/* ============ SUPABASE ============ */
+const SUPABASE_URL = 'https://uitsfeamqntghybpaltb.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_5wdkNoyfbypxU1QuXN0U-g_0w-Z8_sZ';
 
-const safeStorage = (function(){
-  let usable = false;
-  try{
-    const t = '__sm_test__';
-    window.localStorage.setItem(t, '1');
-    window.localStorage.removeItem(t);
-    usable = true;
-  }catch(e){ usable = false; }
+let sb = null;
+let dbReady = false;
+try{
+  if(window.supabase && window.supabase.createClient){
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    dbReady = true;
+  }
+}catch(e){ console.error('Erro ao iniciar Supabase', e); }
 
-  const memory = {};
-
-  return {
-    isPersistent: usable,
-    getItem(key){
-      if(usable){
-        try{ return window.localStorage.getItem(key); }
-        catch(e){ return memory[key] !== undefined ? memory[key] : null; }
-      }
-      return memory[key] !== undefined ? memory[key] : null;
-    },
-    setItem(key, value){
-      if(usable){
-        try{ window.localStorage.setItem(key, value); return; }
-        catch(e){ /* fall through to memory */ }
-      }
-      memory[key] = value;
-    }
-  };
-})();
-
-function loadEntries(){
-  try{
-    const raw = safeStorage.getItem(ENTRIES_KEY);
-    return raw ? JSON.parse(raw) : [];
-  }catch(e){ console.error('Erro ao ler registros', e); return []; }
+function showDbError(msg){
+  const banner = document.getElementById('dbBanner');
+  if(banner){ banner.textContent = msg; banner.style.display = 'block'; }
 }
-function saveEntries(list){
-  try{ safeStorage.setItem(ENTRIES_KEY, JSON.stringify(list)); }
-  catch(e){ console.error('Erro ao salvar registros', e); }
+function hideDbError(){
+  const banner = document.getElementById('dbBanner');
+  if(banner) banner.style.display = 'none';
 }
-function loadSdrs(){
-  try{
-    const raw = safeStorage.getItem(SDRS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  }catch(e){ return []; }
-}
-function saveSdrs(list){
-  try{ safeStorage.setItem(SDRS_KEY, JSON.stringify(list)); }
-  catch(e){ console.error('Erro ao salvar SDRs', e); }
+function setLoading(isLoading){
+  const el = document.getElementById('loadingBanner');
+  if(el) el.style.display = isLoading ? 'block' : 'none';
 }
 
-const CRM_KEY = 'salesmind_crm_leads_v1';
-function loadCrm(){
-  try{
-    const raw = safeStorage.getItem(CRM_KEY);
-    return raw ? JSON.parse(raw) : [];
-  }catch(e){ console.error('Erro ao ler leads', e); return []; }
-}
-function saveCrm(list){
-  try{ safeStorage.setItem(CRM_KEY, JSON.stringify(list)); }
-  catch(e){ console.error('Erro ao salvar leads', e); }
-}
+/* ============ CONSTANTS ============ */
+const FIELDS = ['leads','followups','respondidas','positivas','negativas','convites','agendadas','realizadas','propostas','vendas'];
 
 const STATUS_OPTIONS = [
   { key:'agendada', label:'Reunião agendada', color:'var(--gold)' },
@@ -530,14 +493,137 @@ const STATUS_OPTIONS = [
 ];
 function statusInfo(key){ return STATUS_OPTIONS.find(s=>s.key===key) || STATUS_OPTIONS[0]; }
 
-let entries = loadEntries();
-let sdrs = loadSdrs();
-let currentSdr = sdrs[0] || '';
-let crmLeads = loadCrm();
+/* ============ STATE ============ */
+let entries = [];
+let sdrs = [];
+let currentSdr = '';
+let crmLeads = [];
 let crmEditingId = null;
-let crmStatusFilter = 'all';
+let entryEditingId = null;
 
-const FIELDS = ['leads','followups','respondidas','positivas','negativas','convites','agendadas','realizadas','propostas','vendas'];
+/* ============ REMOTE DATA ACCESS ============ */
+async function fetchAll(){
+  if(!dbReady){
+    showDbError('Não consegui conectar ao banco de dados neste ambiente. No site publicado (GitHub Pages) isso funciona normalmente, desde que haja internet.');
+    return;
+  }
+  try{
+    const [sdrsRes, entriesRes, crmRes] = await Promise.all([
+      sb.from('sdrs').select('*').order('name', { ascending:true }),
+      sb.from('sdr_daily_metrics').select('*').order('date', { ascending:true }),
+      sb.from('crm_leads').select('*').order('data', { ascending:true })
+    ]);
+    if(sdrsRes.error) throw sdrsRes.error;
+    if(entriesRes.error) throw entriesRes.error;
+    if(crmRes.error) throw crmRes.error;
+
+    const namesFromSdrs = sdrsRes.data.map(r=>r.name);
+    const namesFromEntries = entriesRes.data.map(r=>r.sdr);
+    sdrs = Array.from(new Set([...namesFromSdrs, ...namesFromEntries])).sort();
+
+    entries = entriesRes.data.map(r=>({
+      id:r.id, date:r.date, sdr:r.sdr,
+      leads:r.leads||0, followups:r.followups||0, respondidas:r.respondidas||0,
+      positivas:r.positivas||0, negativas:r.negativas||0, convites:r.convites||0,
+      agendadas:r.agendadas||0, realizadas:r.realizadas||0, propostas:r.propostas||0,
+      vendas:r.vendas||0, obs:r.obs || ''
+    }));
+
+    crmLeads = crmRes.data.map(r=>({
+      id:r.id, nome:r.nome, ig:r.ig || '',
+      data:r.data || '', hora: r.hora ? String(r.hora).slice(0,5) : '',
+      status:r.status, obs:r.obs || ''
+    }));
+
+    if(!currentSdr && sdrs.length) currentSdr = sdrs[0];
+    hideDbError();
+  }catch(err){
+    console.error('Erro ao carregar dados do Supabase', err);
+    showDbError('Não foi possível carregar os dados. Verifique sua conexão e recarregue a página. Se o erro persistir, confirme se rodou o SQL de criação das tabelas.');
+  }
+}
+
+async function addSdrRemote(name){
+  if(!sdrs.includes(name)) sdrs.push(name);
+  if(!dbReady) return;
+  try{ await sb.from('sdrs').upsert({ name }, { onConflict:'name' }); }
+  catch(e){ console.error('Erro ao salvar SDR', e); }
+}
+
+async function saveEntryRemote(entry, editingId){
+  if(!dbReady){ showDbError('Sem conexão com o banco — não foi possível salvar.'); return false; }
+  const payload = {
+    date: entry.date, sdr: entry.sdr, leads: entry.leads, followups: entry.followups,
+    respondidas: entry.respondidas, positivas: entry.positivas, negativas: entry.negativas,
+    convites: entry.convites, agendadas: entry.agendadas, realizadas: entry.realizadas,
+    propostas: entry.propostas, vendas: entry.vendas, obs: entry.obs,
+    updated_at: new Date().toISOString()
+  };
+  try{
+    if(editingId){
+      const { error } = await sb.from('sdr_daily_metrics').update(payload).eq('id', editingId);
+      if(error) throw error;
+    }else{
+      const { error } = await sb.from('sdr_daily_metrics').upsert(payload, { onConflict:'date,sdr' });
+      if(error) throw error;
+    }
+    return true;
+  }catch(err){
+    console.error('Erro ao salvar lançamento', err);
+    alert('Não foi possível salvar esse lançamento. ' + (err.message || ''));
+    return false;
+  }
+}
+
+async function deleteEntryRemote(id){
+  if(!dbReady) return false;
+  try{
+    const { error } = await sb.from('sdr_daily_metrics').delete().eq('id', id);
+    if(error) throw error;
+    return true;
+  }catch(err){ console.error('Erro ao apagar lançamento', err); alert('Não foi possível apagar.'); return false; }
+}
+
+async function clearAllRemote(){
+  if(!dbReady) return false;
+  try{
+    const { error } = await sb.from('sdr_daily_metrics').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if(error) throw error;
+    return true;
+  }catch(err){ console.error('Erro ao apagar tudo', err); alert('Não foi possível apagar os registros.'); return false; }
+}
+
+async function saveLeadRemote(lead, editingId){
+  if(!dbReady){ showDbError('Sem conexão com o banco — não foi possível salvar.'); return null; }
+  const payload = {
+    nome: lead.nome, ig: lead.ig, data: lead.data || null, hora: lead.hora || null,
+    status: lead.status, obs: lead.obs, updated_at: new Date().toISOString()
+  };
+  try{
+    if(editingId){
+      const { error } = await sb.from('crm_leads').update(payload).eq('id', editingId);
+      if(error) throw error;
+      return editingId;
+    }else{
+      const { data, error } = await sb.from('crm_leads').insert(payload).select().single();
+      if(error) throw error;
+      return data.id;
+    }
+  }catch(err){
+    console.error('Erro ao salvar lead', err);
+    alert('Não foi possível salvar esse lead. ' + (err.message || ''));
+    return null;
+  }
+}
+
+async function deleteLeadRemote(id){
+  if(!dbReady) return false;
+  try{
+    const { error } = await sb.from('crm_leads').delete().eq('id', id);
+    if(error) throw error;
+    return true;
+  }catch(err){ console.error('Erro ao apagar lead', err); alert('Não foi possível apagar.'); return false; }
+}
 
 /* ============ TABS ============ */
 const tabsEl = document.getElementById('tabs');
@@ -578,93 +664,19 @@ whoSelect.addEventListener('change', ()=>{
   currentSdr = whoSelect.value;
   document.getElementById('f_sdr').value = currentSdr;
 });
-whoAdd.addEventListener('click', ()=>{
+whoAdd.addEventListener('click', async ()=>{
   const name = whoNew.value.trim();
   if(!name) return;
-  if(!sdrs.includes(name)) sdrs.push(name);
-  saveSdrs(sdrs);
+  await addSdrRemote(name);
   currentSdr = name;
   whoNew.value = '';
   renderWhoSelect();
   populateSdrFilter();
 });
-renderWhoSelect();
-
-/* ============ FORM: LANÇAR DIA ============ */
-const dateInput = document.getElementById('f_date');
-(function setToday(){
-  const d = new Date();
-  const iso = d.toISOString().slice(0,10);
-  dateInput.value = iso;
-})();
-
-let entryEditingId = null;
-
-function resetEntryForm(){
-  FIELDS.forEach(f=>{ document.getElementById('f_'+f).value = ''; });
-  document.getElementById('f_obs').value = '';
-  dateInput.value = new Date().toISOString().slice(0,10);
-  entryEditingId = null;
-  document.getElementById('saveBtn').textContent = 'Salvar dia';
-  document.getElementById('entryCancelBtn').style.display = 'none';
-  document.getElementById('editingNote').textContent = '';
-}
-
-document.getElementById('saveBtn').addEventListener('click', ()=>{
-  const sdr = currentSdr;
-  if(!sdr){ alert('Selecione ou adicione um SDR antes de salvar.'); return; }
-  const date = dateInput.value;
-  if(!date){ alert('Selecione a data.'); return; }
-
-  const getNum = id => Math.max(0, parseInt(document.getElementById(id).value || '0', 10));
-  const newId = date + '__' + sdr;
-
-  const entry = {
-    id: newId,
-    date, sdr,
-    leads: getNum('f_leads'),
-    followups: getNum('f_followups'),
-    respondidas: getNum('f_respondidas'),
-    positivas: getNum('f_positivas'),
-    negativas: getNum('f_negativas'),
-    convites: getNum('f_convites'),
-    agendadas: getNum('f_agendadas'),
-    realizadas: getNum('f_realizadas'),
-    propostas: getNum('f_propostas'),
-    vendas: getNum('f_vendas'),
-    obs: document.getElementById('f_obs').value.trim()
-  };
-
-  if(entryEditingId){
-    // Editing an existing record: remove the old one first (handles date/SDR changes too),
-    // then write the updated version, overwriting any record that already sits at the new id.
-    entries = entries.filter(e=>e.id !== entryEditingId);
-    entries = entries.filter(e=>e.id !== newId);
-    entries.push(entry);
-    document.getElementById('editingNote').textContent = 'Lançamento de ' + fmtDate(date) + ' (' + sdr + ') atualizado.';
-  }else{
-    const existingIdx = entries.findIndex(e=>e.id === newId);
-    if(existingIdx >= 0){
-      entries[existingIdx] = entry;
-      document.getElementById('editingNote').textContent = 'Já existia um lançamento para ' + sdr + ' em ' + fmtDate(date) + ' — foi atualizado.';
-    }else{
-      entries.push(entry);
-      document.getElementById('editingNote').textContent = '';
-    }
-  }
-  saveEntries(entries);
-  resetEntryForm();
-  renderHistory();
-
-  const msg = document.getElementById('saveMsg');
-  msg.classList.add('show');
-  setTimeout(()=>msg.classList.remove('show'), 2200);
-});
-
-document.getElementById('entryCancelBtn').addEventListener('click', resetEntryForm);
 
 /* ============ HELPERS ============ */
 function fmtDate(iso){
+  if(!iso) return '';
   const [y,m,d] = iso.split('-');
   return d+'/'+m+'/'+y;
 }
@@ -687,6 +699,71 @@ function daysAgo(n){
 }
 function sum(list, key){ return list.reduce((a,e)=>a+(e[key]||0),0); }
 
+/* ============ FORM: LANÇAR DIA ============ */
+const dateInput = document.getElementById('f_date');
+
+function resetEntryForm(){
+  FIELDS.forEach(f=>{ document.getElementById('f_'+f).value = ''; });
+  document.getElementById('f_obs').value = '';
+  dateInput.value = new Date().toISOString().slice(0,10);
+  entryEditingId = null;
+  document.getElementById('saveBtn').textContent = 'Salvar dia';
+  document.getElementById('entryCancelBtn').style.display = 'none';
+  document.getElementById('editingNote').textContent = '';
+}
+
+document.getElementById('saveBtn').addEventListener('click', async ()=>{
+  const sdr = currentSdr;
+  if(!sdr){ alert('Selecione ou adicione um SDR antes de salvar.'); return; }
+  const date = dateInput.value;
+  if(!date){ alert('Selecione a data.'); return; }
+
+  const getNum = id => Math.max(0, parseInt(document.getElementById(id).value || '0', 10));
+
+  const entry = {
+    date, sdr,
+    leads: getNum('f_leads'),
+    followups: getNum('f_followups'),
+    respondidas: getNum('f_respondidas'),
+    positivas: getNum('f_positivas'),
+    negativas: getNum('f_negativas'),
+    convites: getNum('f_convites'),
+    agendadas: getNum('f_agendadas'),
+    realizadas: getNum('f_realizadas'),
+    propostas: getNum('f_propostas'),
+    vendas: getNum('f_vendas'),
+    obs: document.getElementById('f_obs').value.trim()
+  };
+
+  const btn = document.getElementById('saveBtn');
+  const originalLabel = btn.textContent;
+  btn.textContent = 'Salvando...';
+  btn.disabled = true;
+
+  const ok = await saveEntryRemote(entry, entryEditingId);
+
+  btn.disabled = false;
+  btn.textContent = originalLabel;
+
+  if(!ok) return;
+
+  if(entryEditingId){
+    document.getElementById('editingNote').textContent = 'Lançamento de ' + fmtDate(date) + ' (' + sdr + ') atualizado.';
+  }else{
+    document.getElementById('editingNote').textContent = '';
+  }
+
+  await fetchAll();
+  resetEntryForm();
+  renderHistory();
+
+  const msg = document.getElementById('saveMsg');
+  msg.classList.add('show');
+  setTimeout(()=>msg.classList.remove('show'), 2200);
+});
+
+document.getElementById('entryCancelBtn').addEventListener('click', resetEntryForm);
+
 /* ============ FILTERS ============ */
 function populateSdrFilter(){
   const sel = document.getElementById('sdrFilter');
@@ -699,7 +776,6 @@ function populateSdrFilter(){
   });
   if([...sel.options].some(o=>o.value===current)) sel.value = current;
 }
-populateSdrFilter();
 document.getElementById('periodFilter').addEventListener('change', renderDashboard);
 document.getElementById('sdrFilter').addEventListener('change', renderDashboard);
 
@@ -717,7 +793,7 @@ function getFilteredEntries(){
   return list.sort((a,b)=> a.date.localeCompare(b.date));
 }
 
-/* ============ CHARTS (instances kept to destroy/redraw) ============ */
+/* ============ CHARTS ============ */
 let charts = {};
 function destroyChart(key){ if(charts[key]){ charts[key].destroy(); delete charts[key]; } }
 
@@ -731,6 +807,7 @@ if(typeof Chart !== 'undefined'){
   Chart.defaults.font.family = "'DM Sans', sans-serif";
   Chart.defaults.color = MUTED;
 }
+
 function baseGrid(){
   return { grid:{ color:LINE }, ticks:{ color:MUTED, font:{size:10} } };
 }
@@ -739,7 +816,6 @@ function baseGrid(){
 function renderDashboard(){
   const list = getFilteredEntries();
 
-  // KPIs
   const totLeads = sum(list,'leads');
   const totRespondidas = sum(list,'respondidas');
   const totPositivas = sum(list,'positivas');
@@ -763,7 +839,6 @@ function renderDashboard(){
     `<div class="kpi"><div class="v">${k.v}</div><div class="l">${k.l}</div></div>`
   ).join('');
 
-  // Funil
   const stages = [
     { name:'Leads prospectados', val: totLeads },
     { name:'Mensagens respondidas', val: totRespondidas },
@@ -786,7 +861,6 @@ function renderDashboard(){
     </div>`;
   }).join('');
 
-  // Series por dia
   const byDay = {};
   list.forEach(e=>{
     if(!byDay[e.date]) byDay[e.date] = { leads:0, respondidas:0, agendadas:0, vendas:0 };
@@ -874,7 +948,6 @@ function renderDashboard(){
     }
   }
 
-  // Ranking table
   const rankRows = sdrNames.map(name=>{
     const s = bySdr[name];
     return {
@@ -905,7 +978,7 @@ function renderDashboard(){
   `).join('') : `<tr><td colspan="9" class="empty">Sem dados no período selecionado.</td></tr>`;
 }
 
-/* ============ HISTÓRICO ============ */
+/* ============ HISTÓRICO (lançamentos diários) ============ */
 function renderHistory(){
   const sorted = entries.slice().sort((a,b)=> b.date.localeCompare(a.date));
   const body = document.getElementById('histBody');
@@ -943,7 +1016,7 @@ function renderHistory(){
       const entry = entries.find(e=>e.id === btn.dataset.id);
       if(!entry) return;
       currentSdr = entry.sdr;
-      if(!sdrs.includes(entry.sdr)){ sdrs.push(entry.sdr); saveSdrs(sdrs); }
+      if(!sdrs.includes(entry.sdr)) sdrs.push(entry.sdr);
       renderWhoSelect();
       populateSdrFilter();
       dateInput.value = entry.date;
@@ -962,24 +1035,26 @@ function renderHistory(){
   });
 
   body.querySelectorAll('.rowdel').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
+    btn.addEventListener('click', async ()=>{
       if(!confirm('Apagar este lançamento?')) return;
-      entries = entries.filter(e=>e.id !== btn.dataset.id);
-      saveEntries(entries);
+      const ok = await deleteEntryRemote(btn.dataset.id);
+      if(!ok) return;
+      await fetchAll();
       if(entryEditingId === btn.dataset.id) resetEntryForm();
       renderHistory();
     });
   });
 }
 
-document.getElementById('clearAllBtn').addEventListener('click', ()=>{
-  if(!confirm('Apagar todos os registros deste navegador? Essa ação não pode ser desfeita.')) return;
-  entries = [];
-  saveEntries(entries);
+document.getElementById('clearAllBtn').addEventListener('click', async ()=>{
+  if(!confirm('Apagar todos os lançamentos diários de todo mundo? Essa ação não pode ser desfeita.')) return;
+  const ok = await clearAllRemote();
+  if(!ok) return;
+  await fetchAll();
   renderHistory();
 });
 
-/* ============ CSV EXPORT / IMPORT ============ */
+/* ============ CSV EXPORT / IMPORT (lançamentos diários) ============ */
 const CSV_HEADERS = ['date','sdr','leads','followups','respondidas','positivas','negativas','convites','agendadas','realizadas','propostas','vendas','obs'];
 
 function toCsv(list){
@@ -1018,7 +1093,6 @@ function parseCsv(text){
     ['leads','followups','respondidas','positivas','negativas','convites','agendadas','realizadas','propostas','vendas'].forEach(f=>{
       obj[f] = parseInt(obj[f]||'0',10) || 0;
     });
-    obj.id = obj.date + '__' + obj.sdr;
     rows.push(obj);
   }
   return rows;
@@ -1042,22 +1116,23 @@ document.getElementById('importFile').addEventListener('change', (e)=>{
   const file = e.target.files[0];
   if(!file) return;
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     try{
       const imported = parseCsv(reader.result);
-      let added = 0, updated = 0;
-      imported.forEach(row=>{
-        const idx = entries.findIndex(x=>x.id === row.id);
-        if(idx >= 0){ entries[idx] = row; updated++; }
-        else{ entries.push(row); added++; }
-        if(row.sdr && !sdrs.includes(row.sdr)) sdrs.push(row.sdr);
-      });
-      saveEntries(entries);
-      saveSdrs(sdrs);
+      let count = 0;
+      for(const row of imported){
+        if(!row.date || !row.sdr) continue;
+        const ok = await saveEntryRemote(row, null);
+        if(ok){
+          count++;
+          await addSdrRemote(row.sdr);
+        }
+      }
+      await fetchAll();
       renderWhoSelect();
       populateSdrFilter();
       renderHistory();
-      alert('Importação concluída: '+added+' novos, '+updated+' atualizados.');
+      alert('Importação concluída: '+count+' lançamentos processados.');
     }catch(err){
       console.error(err);
       alert('Não foi possível ler esse CSV. Confira o formato e tente de novo.');
@@ -1072,7 +1147,6 @@ function populateStatusSelect(){
   const sel = document.getElementById('c_status');
   sel.innerHTML = STATUS_OPTIONS.map(s=>`<option value="${s.key}">${s.label}</option>`).join('');
 }
-populateStatusSelect();
 
 function renderStatusChips(){
   const wrap = document.getElementById('statusChips');
@@ -1091,6 +1165,7 @@ function renderStatusChips(){
     });
   });
 }
+let crmStatusFilter = 'all';
 
 function normalizeIg(v){
   v = (v||'').trim();
@@ -1109,13 +1184,11 @@ function resetCrmForm(){
   document.getElementById('crmSaveBtn').textContent = 'Salvar lead';
   document.getElementById('crmCancelBtn').style.display = 'none';
 }
-resetCrmForm();
 
-document.getElementById('crmSaveBtn').addEventListener('click', ()=>{
+document.getElementById('crmSaveBtn').addEventListener('click', async ()=>{
   const nome = document.getElementById('c_nome').value.trim();
   if(!nome){ alert('Preencha o nome do lead.'); return; }
   const lead = {
-    id: crmEditingId || (Date.now()+'_'+Math.random().toString(36).slice(2,7)),
     nome,
     ig: normalizeIg(document.getElementById('c_ig').value),
     data: document.getElementById('c_data').value,
@@ -1123,13 +1196,20 @@ document.getElementById('crmSaveBtn').addEventListener('click', ()=>{
     status: document.getElementById('c_status').value,
     obs: document.getElementById('c_obs').value.trim(),
   };
-  if(crmEditingId){
-    const idx = crmLeads.findIndex(l=>l.id===crmEditingId);
-    if(idx>=0) crmLeads[idx] = lead;
-  }else{
-    crmLeads.push(lead);
-  }
-  saveCrm(crmLeads);
+
+  const btn = document.getElementById('crmSaveBtn');
+  const originalLabel = btn.textContent;
+  btn.textContent = 'Salvando...';
+  btn.disabled = true;
+
+  const resultId = await saveLeadRemote(lead, crmEditingId);
+
+  btn.disabled = false;
+  btn.textContent = originalLabel;
+
+  if(!resultId) return;
+
+  await fetchAll();
   resetCrmForm();
   renderCrm();
   const msg = document.getElementById('crmSaveMsg');
@@ -1183,26 +1263,60 @@ function renderCrm(){
       crmEditingId = lead.id;
       document.getElementById('crmSaveBtn').textContent = 'Atualizar lead';
       document.getElementById('crmCancelBtn').style.display = 'inline-block';
-      document.querySelector('.formcard').scrollIntoView({ behavior:'smooth', block:'start' });
+      document.querySelector('#view-crm .formcard').scrollIntoView({ behavior:'smooth', block:'start' });
     });
   });
   body.querySelectorAll('.rowdel').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
+    btn.addEventListener('click', async ()=>{
       if(!confirm('Apagar este lead?')) return;
-      crmLeads = crmLeads.filter(l=>l.id!==btn.dataset.id);
-      saveCrm(crmLeads);
+      const ok = await deleteLeadRemote(btn.dataset.id);
+      if(!ok) return;
+      await fetchAll();
       if(crmEditingId === btn.dataset.id) resetCrmForm();
       renderCrm();
     });
   });
 }
 
-/* ============ INIT ============ */
-renderHistory();
-if(!safeStorage.isPersistent){
-  const foot = document.querySelector('footer');
-  if(foot) foot.innerHTML = 'Sales Mind &middot; Painel Comercial &middot; <span style="color:var(--gold-soft);">este preview não salva entre sessões — publicado no Netlify, os dados ficam salvos normalmente no navegador</span>';
+/* ============ REALTIME (colaboração ao vivo) ============ */
+function setupRealtime(){
+  if(!dbReady) return;
+  let refreshQueued = false;
+  async function queueRefresh(){
+    if(refreshQueued) return;
+    refreshQueued = true;
+    setTimeout(async ()=>{
+      await fetchAll();
+      const activeView = document.querySelector('section.view.active');
+      if(activeView){
+        if(activeView.id === 'view-dashboard') renderDashboard();
+        if(activeView.id === 'view-historico') renderHistory();
+        if(activeView.id === 'view-crm') renderCrm();
+      }
+      renderWhoSelect();
+      populateSdrFilter();
+      refreshQueued = false;
+    }, 800);
+  }
+  sb.channel('realtime:sdr_daily_metrics').on('postgres_changes', { event:'*', schema:'public', table:'sdr_daily_metrics' }, queueRefresh).subscribe();
+  sb.channel('realtime:crm_leads').on('postgres_changes', { event:'*', schema:'public', table:'crm_leads' }, queueRefresh).subscribe();
+  sb.channel('realtime:sdrs').on('postgres_changes', { event:'*', schema:'public', table:'sdrs' }, queueRefresh).subscribe();
 }
+
+/* ============ INIT ============ */
+async function init(){
+  setLoading(true);
+  await fetchAll();
+  populateStatusSelect();
+  renderWhoSelect();
+  populateSdrFilter();
+  resetEntryForm();
+  resetCrmForm();
+  renderHistory();
+  setLoading(false);
+  setupRealtime();
+}
+init();
 </script>
 
 </body>
